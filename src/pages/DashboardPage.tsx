@@ -1,14 +1,31 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Archive,
+  ArrowDown,
+  ArrowUp,
   ArrowUpRight,
+  CheckCircle2,
+  Eye,
+  EyeOff,
   FolderOpen,
+  History,
   Plus,
+  RotateCcw,
   Server,
+  ShieldAlert,
+  ShieldCheck,
+  SlidersHorizontal,
+  Star,
   TerminalSquare,
 } from 'lucide-react';
+import { panelApi } from '../api/client';
 import { usePanel } from '../context/PanelContext';
-import type { TelemetryPoint } from '../types/panel';
+import type { ApiKeyEntry, SshKeyEntry, TelemetryPoint } from '../types/panel';
+import {
+  computeSecurityScore,
+  DEFAULT_DASHBOARD_PREFS,
+  type DashboardWidgetId,
+} from '../utils/userPreferences';
 import { formatBytes, formatMb, formatRelativeTime, formatUptime } from '../utils/format';
 import { ServerCategoryIcon } from '../components/ui/ServerIcon';
 import { StatusText } from '../components/ui/StatusText';
@@ -16,9 +33,46 @@ import { TelemetryChart } from '../components/ui/TelemetryChart';
 import { PanelConnectionNotice } from '../components/ui/PanelConnectionNotice';
 import defaultAvatar from '../assets/images/avatar_midnightx_user_1795748243919.jpg';
 
+const WIDGET_LABELS: Record<DashboardWidgetId, string> = {
+  stats: 'Infrastructure Statistics',
+  telemetry: 'Cluster Telemetry & Activity',
+  servers: 'Server Overview Cards',
+  security: 'Account Security Health',
+};
+
 export function DashboardPage() {
-  const { servers, user, activityLogs, navigate, loading, panelConnected, connectionError, t } = usePanel();
+  const {
+    servers,
+    user,
+    activityLogs,
+    navigate,
+    loading,
+    panelConnected,
+    connectionError,
+    t,
+    dashboardPrefs,
+    setDashboardPrefs,
+    favoritePages,
+    recentPages,
+    notify,
+  } = usePanel();
   const [history, setHistory] = useState<TelemetryPoint[]>([]);
+  const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [apiKeys, setApiKeys] = useState<ApiKeyEntry[]>([]);
+  const [sshKeys, setSshKeys] = useState<SshKeyEntry[]>([]);
+
+  const showSecurityWidget = !dashboardPrefs.hiddenWidgets.includes('security');
+
+  useEffect(() => {
+    if (!panelConnected || !showSecurityWidget) return;
+    Promise.all([
+      panelApi.getApiKeys().catch(() => []),
+      panelApi.getSshKeys().catch(() => []),
+    ]).then(([keys, ssh]) => {
+      setApiKeys(keys);
+      setSshKeys(ssh);
+    });
+  }, [panelConnected, showSecurityWidget]);
 
   const stats = useMemo(() => {
     const total = servers.length;
@@ -89,206 +143,221 @@ export function DashboardPage() {
 
   const primaryServer = servers[0];
   const displayName = user ? `${user.firstName} ${user.lastName}`.trim() || user.username : 'User';
+  const greetingText = dashboardPrefs.customGreeting.trim() || t('dash.welcome');
+  const securityAssessment = useMemo(
+    () => computeSecurityScore(user, apiKeys, sshKeys),
+    [user, apiKeys, sshKeys]
+  );
 
-  return (
-    <div className="space-y-7">
-      {/* Header & Quick Actions Row */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-6 border-b border-black/[0.06] dark:border-white/[0.06]">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="w-12 h-12 rounded-2xl overflow-hidden ring-2 ring-[#171717] dark:ring-white/20 bg-[#171717] shrink-0 shadow-[0_6px_14px_rgba(0,0,0,0.22)]">
-            <img
-              src={defaultAvatar}
-              alt={displayName}
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover"
-            />
+  const moveWidget = (id: DashboardWidgetId, dir: -1 | 1) => {
+    setDashboardPrefs((prev) => {
+      const idx = prev.widgetOrder.indexOf(id);
+      const target = idx + dir;
+      if (idx < 0 || target < 0 || target >= prev.widgetOrder.length) return prev;
+      const nextOrder = [...prev.widgetOrder];
+      [nextOrder[idx], nextOrder[target]] = [nextOrder[target], nextOrder[idx]];
+      return { ...prev, widgetOrder: nextOrder };
+    });
+  };
+
+  const toggleWidgetVisibility = (id: DashboardWidgetId) => {
+    setDashboardPrefs((prev) => {
+      const hidden = prev.hiddenWidgets.includes(id)
+        ? prev.hiddenWidgets.filter((w) => w !== id)
+        : [...prev.hiddenWidgets, id];
+      return { ...prev, hiddenWidgets: hidden };
+    });
+  };
+
+  const renderWidget = (id: DashboardWidgetId) => {
+    if (dashboardPrefs.hiddenWidgets.includes(id)) return null;
+
+    if (id === 'stats') {
+      return (
+        <section key="stats" aria-label="Infrastructure summary">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3.5">
+            <div className="mx-card-3d p-4 rounded-2xl">
+              <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.totalServers')}</div>
+              <div className="mt-2 text-2xl font-bold mx-stat-3d text-[#171717] dark:text-white">
+                {stats.total}
+              </div>
+              <div className="mt-1 text-[11px] font-medium text-[#777777] dark:text-zinc-500">Assigned instances</div>
+            </div>
+
+            <div className="mx-card-3d p-4 rounded-2xl">
+              <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.onlineServers')}</div>
+              <div className="mt-2 text-2xl font-bold mx-stat-3d-emerald">
+                {stats.online}
+              </div>
+              <div className="mt-1 text-[11px] font-medium text-[#777777] dark:text-zinc-500">Running containers</div>
+            </div>
+
+            <div className="mx-card-3d p-4 rounded-2xl">
+              <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.offlineServers')}</div>
+              <div className="mt-2 text-2xl font-bold mx-stat-3d text-[#171717] dark:text-zinc-200">
+                {stats.offline}
+              </div>
+              <div className="mt-1 text-[11px] font-medium text-[#777777] dark:text-zinc-500">Stopped containers</div>
+            </div>
+
+            <div className="mx-card-3d p-4 rounded-2xl">
+              <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.cpuUsage')}</div>
+              <div className="mt-2 text-2xl font-bold mx-stat-3d-violet">
+                {stats.avgCpuPercent.toFixed(1)}%
+              </div>
+              <div className="mt-1 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
+                {stats.usedCpu.toFixed(1)}% aggregate
+              </div>
+            </div>
+
+            <div className="mx-card-3d p-4 rounded-2xl">
+              <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.ramUsage')}</div>
+              <div className="mt-2 text-2xl font-bold mx-stat-3d-cyan">
+                {stats.memPercent.toFixed(1)}%
+              </div>
+              <div className="mt-1 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
+                {formatBytes(stats.usedMemBytes)} / {servers.length > 0 ? formatBytes(stats.totalMemBytes, 0) : '0 B'}
+              </div>
+            </div>
+
+            <div className="mx-card-3d p-4 rounded-2xl">
+              <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.diskUsage')}</div>
+              <div className="mt-2 text-2xl font-bold mx-stat-3d text-[#171717] dark:text-white">
+                {stats.diskPercent.toFixed(1)}%
+              </div>
+              <div className="mt-1 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
+                {formatBytes(stats.usedDiskBytes)} / {servers.length > 0 ? formatBytes(stats.totalDiskBytes, 0) : '0 B'}
+              </div>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h1 className="mx-heading-3d text-xl sm:text-2xl font-bold text-[#171717] dark:text-white truncate">
-              {t('dash.welcome')}, {displayName}
-            </h1>
-            <p className="text-xs sm:text-sm text-[#777777] dark:text-zinc-400 flex flex-wrap items-center gap-2 mt-0.5">
-              <span>{user?.email}</span>
-              <span aria-hidden="true">·</span>
-              <span className="capitalize">{user?.role || 'user'}</span>
-              <span aria-hidden="true">·</span>
+        </section>
+      );
+    }
+
+    if (id === 'telemetry') {
+      return (
+        <div key="telemetry" className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
+          <section className="xl:col-span-8 mx-card-3d p-5 sm:p-6 rounded-2xl flex flex-col justify-between">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
+                  {t('dash.telemetry')}
+                </h2>
+                <p className="text-xs text-[#777777] dark:text-zinc-400 mt-0.5">
+                  Live CPU & memory readings polled from Pterodactyl Wings
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate({ page: 'servers' })}
+                className="mx-btn-3d px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer"
+              >
+                Inspect Servers
+              </button>
+            </div>
+            <TelemetryChart data={history} height={210} />
+          </section>
+
+          <section className="xl:col-span-4 mx-card-3d p-5 sm:p-6 rounded-2xl flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
+                {t('dash.recentActivity')}
+              </h2>
               <button
                 type="button"
                 onClick={() => navigate({ page: 'account' })}
-                className="text-[#8B5CF6] hover:underline cursor-pointer"
+                className="text-xs text-[#8B5CF6] hover:underline cursor-pointer"
               >
-                Account settings
+                View security
               </button>
-            </p>
-          </div>
-        </div>
-
-        {/* 3D Quick Actions */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {user?.role === 'admin' && (
-            <button
-              type="button"
-              onClick={() => navigate({ page: 'admin', section: 'servers' })}
-              className="mx-btn-3d-primary inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              {t('dash.createServer')}
-            </button>
-          )}
-          {primaryServer && (
-            <>
-              <button
-                type="button"
-                onClick={() => navigate({ page: 'server-console', serverId: primaryServer.id })}
-                className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <TerminalSquare className="w-3.5 h-3.5 text-[#8B5CF6]" />
-                {t('dash.openConsole')}
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate({ page: 'server-backups', serverId: primaryServer.id })}
-                className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <Archive className="w-3.5 h-3.5 text-[#06B6D4]" />
-                {t('dash.manageBackups')}
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate({ page: 'server-files', serverId: primaryServer.id })}
-                className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <FolderOpen className="w-3.5 h-3.5 text-[#777777] dark:text-zinc-400" />
-                {t('dash.viewFiles')}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* 6 Core Statistics */}
-      <section aria-label="Infrastructure summary">
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3.5">
-          <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.totalServers')}</div>
-            <div className="mt-2 text-2xl font-bold mx-stat-3d text-[#171717] dark:text-white">
-              {stats.total}
             </div>
-            <div className="mt-1 text-[11px] font-medium text-[#777777] dark:text-zinc-500">Assigned instances</div>
-          </div>
-
-          <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.onlineServers')}</div>
-            <div className="mt-2 text-2xl font-bold mx-stat-3d-emerald">
-              {stats.online}
-            </div>
-            <div className="mt-1 text-[11px] font-medium text-[#777777] dark:text-zinc-500">Running containers</div>
-          </div>
-
-          <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.offlineServers')}</div>
-            <div className="mt-2 text-2xl font-bold mx-stat-3d text-[#171717] dark:text-zinc-200">
-              {stats.offline}
-            </div>
-            <div className="mt-1 text-[11px] font-medium text-[#777777] dark:text-zinc-500">Stopped containers</div>
-          </div>
-
-          <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.cpuUsage')}</div>
-            <div className="mt-2 text-2xl font-bold mx-stat-3d-violet">
-              {stats.avgCpuPercent.toFixed(1)}%
-            </div>
-            <div className="mt-1 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
-              {stats.usedCpu.toFixed(1)}% aggregate
-            </div>
-          </div>
-
-          <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.ramUsage')}</div>
-            <div className="mt-2 text-2xl font-bold mx-stat-3d-cyan">
-              {stats.memPercent.toFixed(1)}%
-            </div>
-            <div className="mt-1 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
-              {formatBytes(stats.usedMemBytes)} / {servers.length > 0 ? formatBytes(stats.totalMemBytes, 0) : '0 B'}
-            </div>
-          </div>
-
-          <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.diskUsage')}</div>
-            <div className="mt-2 text-2xl font-bold mx-stat-3d text-[#171717] dark:text-white">
-              {stats.diskPercent.toFixed(1)}%
-            </div>
-            <div className="mt-1 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
-              {formatBytes(stats.usedDiskBytes)} / {servers.length > 0 ? formatBytes(stats.totalDiskBytes, 0) : '0 B'}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Resource Graph + Recent Activity Split */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
-        <section className="xl:col-span-8 mx-card-3d p-5 sm:p-6 rounded-2xl flex flex-col justify-between">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div>
-              <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
-                {t('dash.telemetry')}
-              </h2>
-              <p className="text-xs text-[#777777] dark:text-zinc-400 mt-0.5">
-                Live CPU & memory readings polled from Pterodactyl Wings
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate({ page: 'servers' })}
-              className="mx-btn-3d px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer"
-            >
-              Inspect Servers
-            </button>
-          </div>
-          <TelemetryChart data={history} height={210} />
-        </section>
-
-        <section className="xl:col-span-4 mx-card-3d p-5 sm:p-6 rounded-2xl flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
-              {t('dash.recentActivity')}
-            </h2>
-            <button
-              type="button"
-              onClick={() => navigate({ page: 'account' })}
-              className="text-xs text-[#8B5CF6] hover:underline cursor-pointer"
-            >
-              View security
-            </button>
-          </div>
-          {activityLogs.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-xs text-[#777777] dark:text-zinc-400 py-8">
-              No recent account activity recorded.
-            </div>
-          ) : (
-            <div className="divide-y divide-black/[0.06] dark:divide-white/[0.06] flex-1">
-              {activityLogs.slice(0, 5).map((log) => (
-                <div key={log.id} className="py-2.5 first:pt-0 last:pb-0 flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-xs font-medium text-[#171717] dark:text-zinc-200 truncate">
-                      {log.event}
+            {activityLogs.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center text-xs text-[#777777] dark:text-zinc-400 py-8">
+                No recent account activity recorded.
+              </div>
+            ) : (
+              <div className="divide-y divide-black/[0.06] dark:divide-white/[0.06] flex-1">
+                {activityLogs.slice(0, 5).map((log) => (
+                  <div key={log.id} className="py-2.5 first:pt-0 last:pb-0 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-xs font-medium text-[#171717] dark:text-zinc-200 truncate">
+                        {log.event}
+                      </div>
+                      <div className="text-[11px] text-[#777777] dark:text-zinc-400 truncate mt-0.5">
+                        {log.target} · {log.ip}
+                      </div>
                     </div>
-                    <div className="text-[11px] text-[#777777] dark:text-zinc-400 truncate mt-0.5">
-                      {log.target} · {log.ip}
-                    </div>
+                    <span className="text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500 whitespace-nowrap shrink-0">
+                      {formatRelativeTime(log.timestamp)}
+                    </span>
                   </div>
-                  <span className="text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500 whitespace-nowrap shrink-0">
-                    {formatRelativeTime(log.timestamp)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      );
+    }
 
-      {/* Server Overview Cards */}
-      <section aria-label="Server Overview">
+    if (id === 'security') {
+      return (
+        <section key="security" aria-label="Account Security Health" className="mx-card-3d p-5 sm:p-6 rounded-2xl space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="mx-well-3d w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                {securityAssessment.score >= 80 ? (
+                  <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                ) : (
+                  <ShieldAlert className="w-5 h-5 text-amber-500" />
+                )}
+              </div>
+              <div>
+                <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
+                  Account Health & Security Score
+                </h2>
+                <p className="text-xs text-[#777777] dark:text-zinc-400">
+                  Live Pterodactyl posture across 2FA, SSH keys, and API tokens
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <span className="text-xl font-bold mx-stat-3d-violet">{securityAssessment.score}%</span>
+                <span className="block text-[11px] font-medium text-[#777777] dark:text-zinc-400">
+                  {securityAssessment.grade}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate({ page: 'account' })}
+                className="mx-btn-3d px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer"
+              >
+                Manage Security
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {securityAssessment.recommendations.map((rec) => (
+              <div key={rec.id} className="mx-well-3d p-3.5 rounded-xl flex items-start gap-2.5">
+                <CheckCircle2
+                  className={`w-4 h-4 shrink-0 mt-0.5 ${
+                    rec.completed ? 'text-emerald-500' : 'text-amber-500'
+                  }`}
+                />
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-[#171717] dark:text-zinc-100">{rec.title}</div>
+                  <div className="text-[11px] text-[#777777] dark:text-zinc-400 mt-0.5">{rec.detail}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+    }
+
+    return (
+      <section key="servers" aria-label="Server Overview">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
@@ -396,6 +465,241 @@ export function DashboardPage() {
           </div>
         )}
       </section>
+    );
+  };
+
+  return (
+    <div className="space-y-7">
+      {/* Header & Quick Actions Row */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-6 border-b border-black/[0.06] dark:border-white/[0.06]">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-12 h-12 rounded-2xl overflow-hidden ring-2 ring-[#171717] dark:ring-white/20 bg-[#171717] shrink-0 shadow-[0_6px_14px_rgba(0,0,0,0.22)]">
+            <img
+              src={defaultAvatar}
+              alt={displayName}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="min-w-0">
+            <h1 className="mx-heading-3d text-xl sm:text-2xl font-bold text-[#171717] dark:text-white truncate">
+              {greetingText}, {displayName}
+            </h1>
+            <p className="text-xs sm:text-sm text-[#777777] dark:text-zinc-400 flex flex-wrap items-center gap-2 mt-0.5">
+              <span>{user?.email}</span>
+              <span aria-hidden="true">·</span>
+              <span className="capitalize">{user?.role || 'user'}</span>
+              <span aria-hidden="true">·</span>
+              <button
+                type="button"
+                onClick={() => navigate({ page: 'account' })}
+                className="text-[#8B5CF6] hover:underline cursor-pointer"
+              >
+                Account settings
+              </button>
+            </p>
+          </div>
+        </div>
+
+        {/* 3D Quick Actions */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {user?.role === 'admin' && (
+            <button
+              type="button"
+              onClick={() => navigate({ page: 'admin', section: 'servers' })}
+              className="mx-btn-3d-primary inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              {t('dash.createServer')}
+            </button>
+          )}
+          {primaryServer && (
+            <>
+              <button
+                type="button"
+                onClick={() => navigate({ page: 'server-console', serverId: primaryServer.id })}
+                className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <TerminalSquare className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                {t('dash.openConsole')}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate({ page: 'server-backups', serverId: primaryServer.id })}
+                className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <Archive className="w-3.5 h-3.5 text-[#06B6D4]" />
+                {t('dash.manageBackups')}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate({ page: 'server-files', serverId: primaryServer.id })}
+                className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-[#777777] dark:text-zinc-400" />
+                {t('dash.viewFiles')}
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => setCustomizerOpen((o) => !o)}
+            className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[#8B5CF6]" />
+            Customize
+          </button>
+        </div>
+      </div>
+
+      {/* Collapsible Dashboard Customizer (zero impact when closed) */}
+      {customizerOpen && (
+        <section className="mx-card-3d p-5 rounded-2xl space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
+            <div>
+              <h2 className="mx-heading-3d text-sm font-bold text-[#171717] dark:text-white">
+                Dashboard Layout & Personalization
+              </h2>
+              <p className="text-xs text-[#777777] dark:text-zinc-400">
+                Customize widget order, visibility, quick shortcuts bar, and personal greeting
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setDashboardPrefs(DEFAULT_DASHBOARD_PREFS);
+                notify('Dashboard layout reset to defaults', undefined, 'info');
+              }}
+              className="mx-btn-3d inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset Defaults
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="space-y-2.5">
+              <label className="block text-xs font-medium text-[#525252] dark:text-zinc-300">
+                Custom Greeting Prefix
+              </label>
+              <input
+                type="text"
+                value={dashboardPrefs.customGreeting}
+                onChange={(e) =>
+                  setDashboardPrefs((prev) => ({ ...prev, customGreeting: e.target.value }))
+                }
+                placeholder={`Default (${t('dash.welcome')})`}
+                className="mx-input-3d w-full px-3 py-2 text-xs rounded-xl"
+              />
+              <label className="flex items-center gap-2.5 pt-1 text-xs text-[#171717] dark:text-zinc-200 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={dashboardPrefs.showQuickBar}
+                  onChange={(e) =>
+                    setDashboardPrefs((prev) => ({ ...prev, showQuickBar: e.target.checked }))
+                  }
+                  className="rounded accent-[#8B5CF6]"
+                />
+                Show Favorite &amp; Recently Visited Pages bar on Dashboard
+              </label>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-[#525252] dark:text-zinc-300">
+                Widget Order &amp; Visibility
+              </div>
+              <div className="space-y-1.5">
+                {dashboardPrefs.widgetOrder.map((wid, idx) => {
+                  const isHidden = dashboardPrefs.hiddenWidgets.includes(wid);
+                  return (
+                    <div
+                      key={wid}
+                      className="mx-well-3d px-3 py-2 rounded-xl flex items-center justify-between gap-2 text-xs"
+                    >
+                      <span className={isHidden ? 'text-[#777777] line-through' : 'font-medium'}>
+                        {WIDGET_LABELS[wid]}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => moveWidget(wid, -1)}
+                          disabled={idx === 0}
+                          aria-label={`Move ${WIDGET_LABELS[wid]} up`}
+                          className="mx-btn-3d p-1 rounded-lg disabled:opacity-40 cursor-pointer"
+                        >
+                          <ArrowUp className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveWidget(wid, 1)}
+                          disabled={idx === dashboardPrefs.widgetOrder.length - 1}
+                          aria-label={`Move ${WIDGET_LABELS[wid]} down`}
+                          className="mx-btn-3d p-1 rounded-lg disabled:opacity-40 cursor-pointer"
+                        >
+                          <ArrowDown className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleWidgetVisibility(wid)}
+                          aria-label={isHidden ? `Show ${WIDGET_LABELS[wid]}` : `Hide ${WIDGET_LABELS[wid]}`}
+                          className="mx-btn-3d p-1 rounded-lg cursor-pointer"
+                        >
+                          {isHidden ? <EyeOff className="w-3 h-3 text-rose-500" /> : <Eye className="w-3 h-3 text-emerald-500" />}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Optional Favorite & Recently Visited Pages Quick Bar */}
+      {dashboardPrefs.showQuickBar && (favoritePages.length > 0 || recentPages.length > 0) && (
+        <section aria-label="Pinned and recent pages" className="mx-card-3d p-4 rounded-2xl flex flex-wrap items-center gap-2">
+          {favoritePages.length > 0 && (
+            <>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-500 mr-1">
+                <Star className="w-3.5 h-3.5 fill-amber-500" />
+                Pinned
+              </span>
+              {favoritePages.slice(0, 5).map((fav) => (
+                <button
+                  key={fav.id}
+                  type="button"
+                  onClick={() => navigate(fav.route)}
+                  className="mx-btn-3d px-2.5 py-1 rounded-xl text-xs font-medium cursor-pointer"
+                >
+                  {fav.label}
+                </button>
+              ))}
+            </>
+          )}
+          {recentPages.length > 0 && (
+            <>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#777777] dark:text-zinc-400 ml-1 mr-1">
+                <History className="w-3.5 h-3.5" />
+                Recent
+              </span>
+              {recentPages.slice(0, 4).map((rec) => (
+                <button
+                  key={rec.id}
+                  type="button"
+                  onClick={() => navigate(rec.route)}
+                  className="mx-well-3d px-2.5 py-1 rounded-xl text-xs text-[#525252] dark:text-zinc-300 hover:text-[#8B5CF6] cursor-pointer"
+                >
+                  {rec.label}
+                </button>
+              ))}
+            </>
+          )}
+        </section>
+      )}
+
+      {/* Customizable Widgets */}
+      {dashboardPrefs.widgetOrder.map((wid) => renderWidget(wid))}
     </div>
   );
 }

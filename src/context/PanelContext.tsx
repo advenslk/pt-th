@@ -2,6 +2,23 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { PanelApiError, panelApi, toggleLocalFavorite } from '../api/client';
 import { getLanguageOption, translate, type TranslationKey } from '../i18n/translations';
 import type { ActivityLogEntry, PowerSignal, PterodactylServer, UserProfile } from '../types/panel';
+import {
+  getRouteMetadata,
+  loadAccessibilityPrefs,
+  loadDashboardPrefs,
+  loadFavoritePages,
+  loadRecentPages,
+  loadThemeMode,
+  saveAccessibilityPrefs,
+  saveDashboardPrefs,
+  saveFavoritePages,
+  saveRecentPages,
+  saveThemeMode,
+  type AccessibilityPrefs,
+  type DashboardPrefs,
+  type SavedPageRef,
+  type ThemeMode,
+} from '../utils/userPreferences';
 
 export type MainRoute =
   | { page: 'dashboard' }
@@ -30,6 +47,8 @@ export interface ToastMessage {
 
 interface PanelContextValue {
   theme: 'light' | 'dark';
+  themeMode: ThemeMode;
+  setThemeMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
   language: string;
   setLanguage: (code: string) => void;
@@ -55,6 +74,15 @@ interface PanelContextValue {
   setSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   mobileNavOpen: boolean;
   setMobileNavOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  accessibilityPrefs: AccessibilityPrefs;
+  setAccessibilityPrefs: React.Dispatch<React.SetStateAction<AccessibilityPrefs>>;
+  dashboardPrefs: DashboardPrefs;
+  setDashboardPrefs: React.Dispatch<React.SetStateAction<DashboardPrefs>>;
+  favoritePages: SavedPageRef[];
+  toggleFavoritePage: (route: MainRoute, label?: string) => void;
+  recentPages: SavedPageRef[];
+  commandPaletteOpen: boolean;
+  setCommandPaletteOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const PanelContext = createContext<PanelContextValue | null>(null);
@@ -126,13 +154,15 @@ function routeToPath(route: MainRoute): string {
 }
 
 export function PanelProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    try {
-      return localStorage.getItem('midnightx_theme') === 'dark' ? 'dark' : 'light';
-    } catch {
-      return 'light';
-    }
-  });
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => loadThemeMode());
+  const [systemDark, setSystemDark] = useState<boolean>(() =>
+    typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : false
+  );
+
+  const theme: 'light' | 'dark' =
+    themeMode === 'auto' ? (systemDark ? 'dark' : 'light') : themeMode;
 
   const [language, setLanguageState] = useState<string>(() => {
     try {
@@ -154,6 +184,19 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [accessibilityPrefs, setAccessibilityPrefs] = useState<AccessibilityPrefs>(() => loadAccessibilityPrefs());
+  const [dashboardPrefs, setDashboardPrefs] = useState<DashboardPrefs>(() => loadDashboardPrefs());
+  const [favoritePages, setFavoritePages] = useState<SavedPageRef[]>(() => loadFavoritePages());
+  const [recentPages, setRecentPages] = useState<SavedPageRef[]>(() => loadRecentPages());
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -163,6 +206,34 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
       // ignore storage errors
     }
   }, [theme]);
+
+  useEffect(() => {
+    saveThemeMode(themeMode);
+  }, [themeMode]);
+
+  useEffect(() => {
+    saveAccessibilityPrefs(accessibilityPrefs);
+    const root = document.documentElement;
+    if (accessibilityPrefs.fontScale === 'default') {
+      root.removeAttribute('data-font-scale');
+    } else {
+      root.setAttribute('data-font-scale', accessibilityPrefs.fontScale);
+    }
+    if (accessibilityPrefs.reducedMotion) {
+      root.setAttribute('data-reduced-motion', 'true');
+    } else {
+      root.removeAttribute('data-reduced-motion');
+    }
+    if (accessibilityPrefs.highContrast) {
+      root.setAttribute('data-high-contrast', 'true');
+    } else {
+      root.removeAttribute('data-high-contrast');
+    }
+  }, [accessibilityPrefs]);
+
+  useEffect(() => {
+    saveDashboardPrefs(dashboardPrefs);
+  }, [dashboardPrefs]);
 
   useEffect(() => {
     const opt = getLanguageOption(language);
@@ -200,14 +271,49 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     [dismissToast]
   );
 
-  const navigate = useCallback((next: MainRoute) => {
-    const targetPath = routeToPath(next);
-    if (window.location.pathname !== targetPath) {
-      window.history.pushState({}, '', targetPath);
-    }
-    setRoute(next);
-    setMobileNavOpen(false);
-  }, []);
+  const navigate = useCallback(
+    (next: MainRoute) => {
+      const targetPath = routeToPath(next);
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({}, '', targetPath);
+      }
+      setRoute(next);
+      setMobileNavOpen(false);
+      const matchedSrv =
+        'serverId' in next
+          ? servers.find((s) => s.id === next.serverId || s.identifier === next.serverId)?.name
+          : undefined;
+      const meta = getRouteMetadata(next, matchedSrv);
+      setRecentPages((prev) => {
+        const updated: SavedPageRef[] = [
+          { id: meta.id, label: meta.label, route: next, visitedAt: new Date().toISOString() },
+          ...prev.filter((item) => item.id !== meta.id),
+        ].slice(0, 8);
+        saveRecentPages(updated);
+        return updated;
+      });
+    },
+    [servers]
+  );
+
+  const toggleFavoritePage = useCallback(
+    (targetRoute: MainRoute, customLabel?: string) => {
+      const matchedSrv =
+        'serverId' in targetRoute
+          ? servers.find((s) => s.id === targetRoute.serverId || s.identifier === targetRoute.serverId)?.name
+          : undefined;
+      const meta = getRouteMetadata(targetRoute, matchedSrv);
+      setFavoritePages((prev) => {
+        const exists = prev.some((p) => p.id === meta.id);
+        const nextList = exists
+          ? prev.filter((p) => p.id !== meta.id)
+          : [{ id: meta.id, label: customLabel || meta.label, route: targetRoute }, ...prev].slice(0, 12);
+        saveFavoritePages(nextList);
+        return nextList;
+      });
+    },
+    [servers]
+  );
 
   const refreshData = useCallback(async () => {
     try {
@@ -248,9 +354,16 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(timer);
   }, [refreshData]);
 
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  const setThemeMode = useCallback((mode: ThemeMode) => {
+    setThemeModeState(mode);
   }, []);
+
+  const toggleTheme = useCallback(() => {
+    setThemeModeState((prev) => {
+      const resolved = prev === 'auto' ? (systemDark ? 'dark' : 'light') : prev;
+      return resolved === 'light' ? 'dark' : 'light';
+    });
+  }, [systemDark]);
 
   const sendPower = useCallback(
     async (serverId: string, signal: PowerSignal) => {
@@ -281,6 +394,8 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     <PanelContext.Provider
       value={{
         theme,
+        themeMode,
+        setThemeMode,
         toggleTheme,
         language,
         setLanguage,
@@ -306,6 +421,15 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
         setSidebarCollapsed,
         mobileNavOpen,
         setMobileNavOpen,
+        accessibilityPrefs,
+        setAccessibilityPrefs,
+        dashboardPrefs,
+        setDashboardPrefs,
+        favoritePages,
+        toggleFavoritePage,
+        recentPages,
+        commandPaletteOpen,
+        setCommandPaletteOpen,
       }}
     >
       {children}

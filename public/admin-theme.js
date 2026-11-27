@@ -93,9 +93,9 @@
       applyAdminTheme(getStoredTheme());
     }
 
-    // 5. Ensure every admin table scrolls cleanly horizontally on small screens
+    // 5. Ensure every admin table scrolls cleanly horizontally on small screens + add CSV export
     var tables = document.querySelectorAll('.content table.table');
-    tables.forEach(function (tbl) {
+    tables.forEach(function (tbl, tblIdx) {
       var parent = tbl.parentElement;
       if (parent && !parent.classList.contains('table-responsive') && !parent.classList.contains('mx-table-scroll')) {
         var wrap = document.createElement('div');
@@ -103,6 +103,162 @@
         parent.insertBefore(wrap, tbl);
         wrap.appendChild(tbl);
       }
+
+      var box = tbl.closest('.box');
+      var rows = tbl.querySelectorAll('tr');
+      if (box && rows.length > 1) {
+        var header = box.querySelector('.box-header');
+        if (header && !header.querySelector('.mx-admin-csv-btn')) {
+          var tools = header.querySelector('.box-tools');
+          if (!tools) {
+            tools = document.createElement('div');
+            tools.className = 'box-tools';
+            header.appendChild(tools);
+          }
+          var csvBtn = document.createElement('button');
+          csvBtn.type = 'button';
+          csvBtn.className = 'btn btn-default btn-xs mx-admin-csv-btn';
+          csvBtn.title = 'Export visible table rows to CSV';
+          csvBtn.textContent = 'Export CSV';
+          csvBtn.addEventListener('click', function () {
+            var lines = [];
+            tbl.querySelectorAll('tr').forEach(function (tr) {
+              var cols = [];
+              tr.querySelectorAll('th, td').forEach(function (cell) {
+                var txt = (cell.innerText || cell.textContent || '').replace(/\s+/g, ' ').trim();
+                cols.push('"' + txt.replace(/"/g, '""') + '"');
+              });
+              if (cols.length) lines.push(cols.join(','));
+            });
+            var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            var pageSlug = (location.pathname.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'admin');
+            a.href = url;
+            a.download = pageSlug + '-table-' + (tblIdx + 1) + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          });
+          tools.appendChild(csvBtn);
+        }
+      }
     });
+
+    // 6. Admin Quick Jump Palette (Ctrl+K / Cmd+K + navbar trigger)
+    var navItems = [];
+    document.querySelectorAll('.sidebar-menu a[href]').forEach(function (a) {
+      var href = a.getAttribute('href');
+      if (!href || href === '#') return;
+      var label = (a.innerText || a.textContent || '').replace(/\s+/g, ' ').trim();
+      if (label) navItems.push({ label: label, href: href });
+    });
+
+    if (navItems.length > 0 && navList && !document.getElementById('mx-admin-jump-btn')) {
+      var jumpLi = document.createElement('li');
+      var jumpBtn = document.createElement('button');
+      jumpBtn.id = 'mx-admin-jump-btn';
+      jumpBtn.type = 'button';
+      jumpBtn.className = 'mx-admin-theme-btn';
+      jumpBtn.title = 'Quick Jump (Ctrl+K)';
+      jumpBtn.setAttribute('aria-label', 'Open Admin Quick Jump (Ctrl+K)');
+      jumpBtn.innerHTML = '<span aria-hidden="true">⌕</span><span class="mx-admin-theme-label">⌘K</span>';
+      jumpLi.appendChild(jumpBtn);
+      navList.insertBefore(jumpLi, navList.firstChild);
+
+      var overlay = document.createElement('div');
+      overlay.id = 'mx-admin-jump-modal';
+      overlay.className = 'mx-admin-jump-overlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.innerHTML =
+        '<div class="mx-admin-jump-card">' +
+        '  <div class="mx-admin-jump-head">' +
+        '    <input type="text" id="mx-admin-jump-input" class="form-control" placeholder="Jump to admin section..." autocomplete="off" />' +
+        '    <button type="button" id="mx-admin-jump-close" class="btn btn-default btn-sm">ESC</button>' +
+        '  </div>' +
+        '  <div id="mx-admin-jump-list" class="mx-admin-jump-list"></div>' +
+        '</div>';
+      document.body.appendChild(overlay);
+
+      var jumpInput = document.getElementById('mx-admin-jump-input');
+      var jumpList = document.getElementById('mx-admin-jump-list');
+      var activeIdx = 0;
+      var currentMatches = navItems.slice();
+
+      function renderJumpList() {
+        var q = (jumpInput.value || '').trim().toLowerCase();
+        currentMatches = q
+          ? navItems.filter(function (item) {
+              return item.label.toLowerCase().indexOf(q) !== -1 || item.href.toLowerCase().indexOf(q) !== -1;
+            })
+          : navItems.slice();
+        if (activeIdx >= currentMatches.length) activeIdx = 0;
+
+        jumpList.innerHTML = '';
+        if (currentMatches.length === 0) {
+          var empty = document.createElement('div');
+          empty.className = 'mx-admin-jump-empty';
+          empty.textContent = 'No matching admin routes.';
+          jumpList.appendChild(empty);
+          return;
+        }
+        currentMatches.forEach(function (item, idx) {
+          var row = document.createElement('a');
+          row.href = item.href;
+          row.className = 'mx-admin-jump-item' + (idx === activeIdx ? ' is-active' : '');
+          row.innerHTML = '<span>' + item.label.replace(/</g, '&lt;') + '</span><small>' + item.href.replace(/</g, '&lt;') + '</small>';
+          jumpList.appendChild(row);
+        });
+      }
+
+      function openJump() {
+        overlay.classList.add('is-open');
+        jumpInput.value = '';
+        activeIdx = 0;
+        renderJumpList();
+        setTimeout(function () {
+          jumpInput.focus();
+        }, 20);
+      }
+
+      function closeJump() {
+        overlay.classList.remove('is-open');
+      }
+
+      jumpBtn.addEventListener('click', openJump);
+      document.getElementById('mx-admin-jump-close').addEventListener('click', closeJump);
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeJump();
+      });
+      jumpInput.addEventListener('input', function () {
+        activeIdx = 0;
+        renderJumpList();
+      });
+      jumpInput.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowDown' && currentMatches.length) {
+          e.preventDefault();
+          activeIdx = (activeIdx + 1) % currentMatches.length;
+          renderJumpList();
+        } else if (e.key === 'ArrowUp' && currentMatches.length) {
+          e.preventDefault();
+          activeIdx = (activeIdx - 1 + currentMatches.length) % currentMatches.length;
+          renderJumpList();
+        } else if (e.key === 'Enter' && currentMatches[activeIdx]) {
+          e.preventDefault();
+          window.location.href = currentMatches[activeIdx].href;
+        }
+      });
+      document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          if (overlay.classList.contains('is-open')) closeJump();
+          else openJump();
+        } else if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
+          closeJump();
+        }
+      });
+    }
   });
 })();

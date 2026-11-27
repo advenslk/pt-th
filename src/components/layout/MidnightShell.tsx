@@ -23,6 +23,7 @@ import {
   Settings,
   Shield,
   SlidersHorizontal,
+  Star,
   Sun,
   TerminalSquare,
   User,
@@ -31,6 +32,8 @@ import {
 } from 'lucide-react';
 import { panelApi } from '../../api/client';
 import { usePanel, type MainRoute } from '../../context/PanelContext';
+import { getRouteMetadata } from '../../utils/userPreferences';
+import { CommandPalette } from '../ui/CommandPalette';
 import { LanguageSelector } from '../ui/LanguageSelector';
 import { StatusText } from '../ui/StatusText';
 import defaultAvatar from '../../assets/images/avatar_midnightx_user_1795748243919.jpg';
@@ -61,6 +64,10 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
     setSidebarCollapsed,
     mobileNavOpen,
     setMobileNavOpen,
+    favoritePages,
+    toggleFavoritePage,
+    setCommandPaletteOpen,
+    notify,
   } = usePanel();
 
   const [treeSearch, setTreeSearch] = useState('');
@@ -78,6 +85,11 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
       : activeServer?.id || servers[0]?.id || '';
 
   const onlineCount = servers.filter((s) => s.status === 'running').length;
+  const currentPageMeta = useMemo(
+    () => getRouteMetadata(route, activeServer?.name),
+    [route, activeServer?.name]
+  );
+  const isCurrentPinned = favoritePages.some((p) => p.id === currentPageMeta.id);
 
   const groupedTree = useMemo(() => {
     const q = treeSearch.trim().toLowerCase();
@@ -676,6 +688,42 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
                 </div>
               )}
 
+              <button
+                type="button"
+                onClick={() => setCommandPaletteOpen(true)}
+                title="Quick Jump (Ctrl+K)"
+                aria-label="Open Quick Navigation (Ctrl+K)"
+                className="mx-btn-3d inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium cursor-pointer shrink-0"
+              >
+                <Search className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                <span className="hidden lg:inline text-[11px] text-[#777777] dark:text-zinc-400 font-mono">
+                  ⌘K
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  toggleFavoritePage(route, currentPageMeta.label);
+                  notify(
+                    isCurrentPinned ? 'Removed from favorites' : 'Pinned to favorites',
+                    currentPageMeta.label,
+                    'success'
+                  );
+                }}
+                title={isCurrentPinned ? 'Unpin Favorite Page' : 'Pin Page to Favorites'}
+                aria-label={isCurrentPinned ? 'Unpin Favorite Page' : 'Pin Page to Favorites'}
+                className="mx-btn-3d hidden sm:inline-flex items-center justify-center w-8 h-8 rounded-xl cursor-pointer shrink-0"
+              >
+                <Star
+                  className={`w-3.5 h-3.5 ${
+                    isCurrentPinned
+                      ? 'text-amber-500 fill-amber-500'
+                      : 'text-[#777777] dark:text-zinc-400'
+                  }`}
+                />
+              </button>
+
               <LanguageSelector />
 
               <button
@@ -737,6 +785,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
           ))}
         </div>
       )}
+      <CommandPalette />
     </div>
   );
 }

@@ -591,3 +591,35 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Opt-in Accessibility Preferences (inactive by default) */
+html[data-font-scale='compact'] {
+  font-size: 14.5px;
+}
+
+html[data-font-scale='large'] {
+  font-size: 17.5px;
+}
+
+html[data-reduced-motion='true'] *,
+html[data-reduced-motion='true'] *::before,
+html[data-reduced-motion='true'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+html[data-high-contrast='true'] .mx-card-3d,
+html[data-high-contrast='true'] .mx-input-3d,
+html[data-high-contrast='true'] .mx-btn-3d {
+  border-width: 1.5px;
+  border-color: rgba(23, 23, 23, 0.35);
+}
+
+html.dark[data-high-contrast='true'] .mx-card-3d,
+html.dark[data-high-contrast='true'] .mx-input-3d,
+html.dark[data-high-contrast='true'] .mx-btn-3d {
+  border-width: 1.5px;
+  border-color: rgba(255, 255, 255, 0.32);
+}
+

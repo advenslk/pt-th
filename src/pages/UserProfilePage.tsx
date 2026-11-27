@@ -1,17 +1,49 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Copy, Key, Lock, ShieldCheck, Terminal, Trash2 } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  CheckCircle2,
+  Copy,
+  Download,
+  Key,
+  Lock,
+  MonitorCog,
+  Search,
+  ShieldAlert,
+  ShieldCheck,
+  Terminal,
+  Trash2,
+} from 'lucide-react';
 import { panelApi } from '../api/client';
 import { usePanel } from '../context/PanelContext';
 import type { ActivityLogEntry, ApiKeyEntry, SshKeyEntry } from '../types/panel';
 import { formatRelativeTime } from '../utils/format';
+import {
+  computeSecurityScore,
+  evaluatePasswordStrength,
+  exportAccountDataJson,
+  type FontScale,
+  type ThemeMode,
+} from '../utils/userPreferences';
 import { PanelConnectionNotice } from '../components/ui/PanelConnectionNotice';
 import defaultAvatar from '../assets/images/avatar_midnightx_user_1795748243919.jpg';
 
 export function UserProfilePage() {
-  const { user, refreshData, notify, panelConnected, connectionError } = usePanel();
+  const {
+    user,
+    servers,
+    refreshData,
+    notify,
+    panelConnected,
+    connectionError,
+    themeMode,
+    setThemeMode,
+    accessibilityPrefs,
+    setAccessibilityPrefs,
+  } = usePanel();
   const [apiKeys, setApiKeys] = useState<ApiKeyEntry[]>([]);
   const [sshKeys, setSshKeys] = useState<SshKeyEntry[]>([]);
   const [activity, setActivity] = useState<ActivityLogEntry[]>([]);
+  const [activitySearch, setActivitySearch] = useState('');
+  const [activityCategory, setActivityCategory] = useState<'all' | 'auth' | 'power' | 'file' | 'backup'>('all');
 
   const [email, setEmail] = useState(user?.email || '');
   const [emailPassword, setEmailPassword] = useState('');
@@ -166,16 +198,100 @@ export function UserProfilePage() {
     }
   };
 
+  const securityAssessment = useMemo(
+    () => computeSecurityScore(user, apiKeys, sshKeys),
+    [user, apiKeys, sshKeys]
+  );
+
+  const passwordStrength = useMemo(
+    () => evaluatePasswordStrength(newPassword),
+    [newPassword]
+  );
+
+  const filteredActivity = useMemo(() => {
+    const q = activitySearch.trim().toLowerCase();
+    return activity.filter((item) => {
+      if (activityCategory !== 'all' && item.category !== activityCategory) return false;
+      if (!q) return true;
+      return `${item.event} ${item.ip} ${item.target || ''}`.toLowerCase().includes(q);
+    });
+  }, [activity, activitySearch, activityCategory]);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#171717] dark:text-white">
-          Account & Security
-        </h1>
-        <p className="text-xs sm:text-sm text-[#777777] dark:text-zinc-400 mt-0.5">
-          Manage your Pterodactyl credentials, Two-Factor Authentication, and Client API keys
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#171717] dark:text-white">
+            Account & Security
+          </h1>
+          <p className="text-xs sm:text-sm text-[#777777] dark:text-zinc-400 mt-0.5">
+            Manage your Pterodactyl credentials, Two-Factor Authentication, and Client API keys
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            exportAccountDataJson({ user, servers, apiKeys, sshKeys, activity });
+            notify('Account data exported', 'Downloaded JSON snapshot of your account.', 'success');
+          }}
+          className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium cursor-pointer shrink-0"
+        >
+          <Download className="w-3.5 h-3.5 text-[#8B5CF6]" />
+          Export Account Data (JSON)
+        </button>
       </div>
+
+      {/* Account Security Score & Recommendations */}
+      <section className="mx-card-3d p-5 sm:p-6 rounded-2xl space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="mx-well-3d w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+              {securityAssessment.score >= 80 ? (
+                <ShieldCheck className="w-5 h-5 text-emerald-500" />
+              ) : (
+                <ShieldAlert className="w-5 h-5 text-amber-500" />
+              )}
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-[#171717] dark:text-white">
+                Account Security Score & Recommendations
+              </h2>
+              <p className="text-xs text-[#777777] dark:text-zinc-400">
+                Real-time assessment of your active 2FA, SSH keys, and API key allowlists
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <span className="text-2xl font-bold mx-stat-3d-violet">{securityAssessment.score}%</span>
+            <span className="mx-well-3d px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#171717] dark:text-zinc-200">
+              {securityAssessment.grade}
+            </span>
+          </div>
+        </div>
+
+        <div className="mx-well-3d h-2.5 rounded-full overflow-hidden p-[1.5px]">
+          <div
+            className="mx-meter-violet h-full rounded-full transition-all duration-300"
+            style={{ width: `${securityAssessment.score}%` }}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {securityAssessment.recommendations.map((rec) => (
+            <div key={rec.id} className="mx-well-3d p-3.5 rounded-xl flex items-start gap-2.5">
+              <CheckCircle2
+                className={`w-4 h-4 shrink-0 mt-0.5 ${
+                  rec.completed ? 'text-emerald-500' : 'text-amber-500'
+                }`}
+              />
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-[#171717] dark:text-zinc-100">{rec.title}</div>
+                <div className="text-[11px] text-[#777777] dark:text-zinc-400 mt-0.5">{rec.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <form onSubmit={handleSaveEmail} className="mx-card-3d p-5 sm:p-6 rounded-2xl space-y-4">
@@ -253,6 +369,56 @@ export function UserProfilePage() {
                 className="mx-input-3d px-3 py-2 text-xs rounded-xl"
               />
             </div>
+
+            {newPassword.length > 0 && (
+              <div className="mx-well-3d p-3 rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-[#777777] dark:text-zinc-400 font-medium">Password Strength</span>
+                  <span
+                    className={`font-semibold ${
+                      passwordStrength.score >= 3
+                        ? 'text-emerald-500'
+                        : passwordStrength.score === 2
+                          ? 'text-amber-500'
+                          : 'text-rose-500'
+                    }`}
+                  >
+                    {passwordStrength.label}
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[1, 2, 3, 4].map((step) => (
+                    <div
+                      key={step}
+                      className={`h-1.5 rounded-full transition-colors ${
+                        passwordStrength.score >= step
+                          ? passwordStrength.score >= 3
+                            ? 'bg-emerald-500'
+                            : passwordStrength.score === 2
+                              ? 'bg-amber-500'
+                              : 'bg-rose-500'
+                          : 'bg-black/10 dark:bg-white/10'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[#777777] dark:text-zinc-400">
+                  <span className={passwordStrength.checks.length ? 'text-emerald-500 font-medium' : ''}>
+                    10+ chars
+                  </span>
+                  <span className={passwordStrength.checks.upper && passwordStrength.checks.lower ? 'text-emerald-500 font-medium' : ''}>
+                    Upper &amp; lower
+                  </span>
+                  <span className={passwordStrength.checks.number ? 'text-emerald-500 font-medium' : ''}>
+                    Number
+                  </span>
+                  <span className={passwordStrength.checks.symbol ? 'text-emerald-500 font-medium' : ''}>
+                    Symbol
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end">
               <button type="submit" className="mx-btn-3d px-4 py-2 rounded-xl text-xs font-medium cursor-pointer">
                 Update Password
@@ -495,14 +661,120 @@ export function UserProfilePage() {
         </div>
       </section>
 
+      {/* Theme & Accessibility Preferences */}
+      <section className="mx-card-3d p-5 sm:p-6 rounded-2xl space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-[#171717] dark:text-white flex items-center gap-2">
+            <MonitorCog className="w-4 h-4 text-[#8B5CF6]" />
+            Appearance &amp; Accessibility Preferences
+          </h2>
+          <p className="text-xs text-[#777777] dark:text-zinc-400">
+            Configure system theme auto-switching, typography scale, reduced motion, and contrast
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="mx-well-3d p-4 rounded-xl space-y-2.5">
+            <div className="text-xs font-semibold text-[#171717] dark:text-zinc-200">Theme Mode</div>
+            <div className="flex flex-wrap gap-2">
+              {(['light', 'dark', 'auto'] as ThemeMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setThemeMode(mode)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium capitalize cursor-pointer ${
+                    themeMode === mode ? 'mx-btn-3d-primary' : 'mx-btn-3d'
+                  }`}
+                >
+                  {mode === 'auto' ? 'Auto (System)' : mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mx-well-3d p-4 rounded-xl space-y-2.5">
+            <div className="text-xs font-semibold text-[#171717] dark:text-zinc-200">Interface Font Scale</div>
+            <div className="flex flex-wrap gap-2">
+              {(['compact', 'default', 'large'] as FontScale[]).map((scale) => (
+                <button
+                  key={scale}
+                  type="button"
+                  onClick={() =>
+                    setAccessibilityPrefs((prev) => ({ ...prev, fontScale: scale }))
+                  }
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium capitalize cursor-pointer ${
+                    accessibilityPrefs.fontScale === scale ? 'mx-btn-3d-primary' : 'mx-btn-3d'
+                  }`}
+                >
+                  {scale}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-5 pt-1">
+          <label className="flex items-center gap-2 text-xs text-[#171717] dark:text-zinc-200 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={accessibilityPrefs.reducedMotion}
+              onChange={(e) =>
+                setAccessibilityPrefs((prev) => ({ ...prev, reducedMotion: e.target.checked }))
+              }
+              className="rounded accent-[#8B5CF6]"
+            />
+            Reduced motion (disable RGB gradient &amp; transition animations)
+          </label>
+          <label className="flex items-center gap-2 text-xs text-[#171717] dark:text-zinc-200 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={accessibilityPrefs.highContrast}
+              onChange={(e) =>
+                setAccessibilityPrefs((prev) => ({ ...prev, highContrast: e.target.checked }))
+              }
+              className="rounded accent-[#8B5CF6]"
+            />
+            High-contrast card &amp; input borders
+          </label>
+        </div>
+      </section>
+
       {/* Account Activity Audit Log */}
-      <section className="mx-card-3d p-5 rounded-2xl space-y-3">
-        <h2 className="text-sm font-semibold text-[#171717] dark:text-white">Account Activity Log</h2>
-        {activity.length === 0 ? (
-          <div className="text-xs text-[#777777] py-4">No activity events recorded.</div>
+      <section className="mx-card-3d p-5 rounded-2xl space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-[#171717] dark:text-white">Account Activity Log</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-[#777777] absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={activitySearch}
+                onChange={(e) => setActivitySearch(e.target.value)}
+                placeholder="Search event or IP..."
+                className="mx-input-3d pl-8 pr-3 py-1.5 text-xs rounded-xl w-48"
+              />
+            </div>
+            {(['all', 'auth', 'power', 'file', 'backup'] as const).map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setActivityCategory(cat)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium capitalize cursor-pointer ${
+                  activityCategory === cat ? 'mx-btn-3d-primary' : 'mx-btn-3d'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+        {filteredActivity.length === 0 ? (
+          <div className="text-xs text-[#777777] py-4">
+            {activity.length === 0 ? 'No activity events recorded.' : 'No events match your current filter.'}
+          </div>
         ) : (
           <div className="divide-y divide-black/[0.05] dark:divide-white/[0.05]">
-            {activity.slice(0, 15).map((item) => (
+            {filteredActivity.slice(0, 25).map((item) => (
               <div key={item.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
                 <div>
                   <div className="font-mono font-medium">{item.event}</div>
