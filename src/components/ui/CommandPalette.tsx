@@ -27,6 +27,7 @@ import {
   TerminalSquare,
   Users,
   X,
+  Zap,
 } from 'lucide-react';
 import { usePanel, type MainRoute } from '../../context/PanelContext';
 import { getRouteMetadata } from '../../utils/userPreferences';
@@ -145,6 +146,15 @@ export function CommandPalette() {
         onSelect: () => go({ page: 'servers' }),
       },
       {
+        id: 'page:optimize',
+        group: 'Pages',
+        label: 'Server Optimizer (Auto & Manual)',
+        subtitle: 'Tune configs, startup flags, log cleanup & multi-server optimization',
+        keywords: 'optimize performance tps lag ram cpu auto cleanup',
+        icon: Zap,
+        onSelect: () => go({ page: 'optimize' }),
+      },
+      {
         id: 'page:account',
         group: 'Pages',
         label: 'Account & Security',
@@ -240,6 +250,7 @@ export function CommandPalette() {
         { page: 'server-users', title: 'Sub-Users', icon: Users },
         { page: 'server-startup', title: 'Startup', icon: Play },
         { page: 'server-settings', title: 'Settings', icon: SlidersHorizontal },
+        { page: 'server-optimize', title: 'Optimize', icon: Zap },
       ];
 
       subRoutes.forEach((sub) => {

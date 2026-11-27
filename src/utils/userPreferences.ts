@@ -208,6 +208,8 @@ export function getRouteMetadata(route: MainRoute, activeServerName?: string): {
       return { id: 'dashboard', label: 'Dashboard' };
     case 'servers':
       return { id: 'servers', label: 'All Servers' };
+    case 'optimize':
+      return { id: 'optimize', label: 'Server Optimizer' };
     case 'account':
       return { id: 'account', label: 'Account & Security' };
     case 'billing':

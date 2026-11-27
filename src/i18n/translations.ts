@@ -65,6 +65,7 @@ export type TranslationKey =
   | 'nav.platform'
   | 'nav.dashboard'
   | 'nav.servers'
+  | 'nav.optimize'
   | 'nav.console'
   | 'nav.files'
   | 'nav.backups'
@@ -109,6 +110,7 @@ const EN: Record<TranslationKey, string> = {
   'nav.platform': 'Platform',
   'nav.dashboard': 'Dashboard',
   'nav.servers': 'Servers',
+  'nav.optimize': 'Optimizer',
   'nav.console': 'Console',
   'nav.files': 'File Manager',
   'nav.backups': 'Backups',
@@ -157,6 +159,7 @@ const TRANSLATIONS: Record<string, Partial<Record<TranslationKey, string>>> = {
     'nav.platform': 'වේදිකාව',
     'nav.dashboard': 'ප්‍රධාන පුවරුව',
     'nav.servers': 'සර්වර්',
+    'nav.optimize': 'ප්‍රශස්තකරණය',
     'nav.console': 'කොන්සෝලය',
     'nav.files': 'ගොනු කළමනාකරු',
     'nav.backups': 'උපස්ථ (Backups)',

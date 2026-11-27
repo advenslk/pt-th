@@ -21,10 +21,22 @@ import {
   type SavedPageRef,
   type ThemeMode,
 } from '../utils/userPreferences';
+import {
+  loadAutoOptimizeSettings,
+  loadLastAutoRunMap,
+  loadOptimizeHistory,
+  optimizeServer,
+  saveAutoOptimizeSettings,
+  saveLastAutoRunMap,
+  saveOptimizeHistory,
+  type AutoOptimizeSettings,
+  type OptimizeRunLogEntry,
+} from '../utils/serverOptimizer';
 
 export type MainRoute =
   | { page: 'dashboard' }
   | { page: 'servers' }
+  | { page: 'optimize' }
   | { page: 'server-console'; serverId: string }
   | { page: 'server-files'; serverId: string }
   | { page: 'server-backups'; serverId: string }
@@ -35,6 +47,7 @@ export type MainRoute =
   | { page: 'server-startup'; serverId: string }
   | { page: 'server-settings'; serverId: string }
   | { page: 'server-activity'; serverId: string }
+  | { page: 'server-optimize'; serverId: string }
   | { page: 'account' }
   | { page: 'billing' }
   | { page: 'support' }
@@ -92,6 +105,14 @@ interface PanelContextValue {
   refreshHelzerx: () => Promise<void>;
   dismissedAnnouncements: string[];
   dismissAnnouncement: (id: string) => void;
+  autoOptimizeSettings: AutoOptimizeSettings;
+  setAutoOptimizeSettings: React.Dispatch<React.SetStateAction<AutoOptimizeSettings>>;
+  toggleAutoOptimize: (enabled?: boolean) => void;
+  toggleServerAutoOptimize: (serverId: string) => void;
+  optimizeHistory: OptimizeRunLogEntry[];
+  appendOptimizeLog: (entry: OptimizeRunLogEntry) => void;
+  clearOptimizeHistory: () => void;
+  isAutoOptimizing: boolean;
 }
 
 const PanelContext = createContext<PanelContextValue | null>(null);
@@ -121,6 +142,7 @@ function parsePathname(pathname: string): MainRoute {
   const clean = pathname.replace(/\/+$/, '') || '/';
   if (clean === '/' || clean === '/dashboard') return { page: 'dashboard' };
   if (clean === '/servers') return { page: 'servers' };
+  if (clean === '/optimize') return { page: 'optimize' };
   if (clean === '/account' || clean.startsWith('/account/')) return { page: 'account' };
   if (clean === '/billing') return { page: 'billing' };
   if (clean === '/support') return { page: 'support' };
@@ -144,6 +166,7 @@ function parsePathname(pathname: string): MainRoute {
     if (sub === 'startup') return { page: 'server-startup', serverId };
     if (sub === 'settings') return { page: 'server-settings', serverId };
     if (sub === 'activity') return { page: 'server-activity', serverId };
+    if (sub === 'optimize') return { page: 'server-optimize', serverId };
     return { page: 'server-console', serverId };
   }
   return { page: 'dashboard' };
@@ -155,6 +178,8 @@ function routeToPath(route: MainRoute): string {
       return '/';
     case 'servers':
       return '/servers';
+    case 'optimize':
+      return '/optimize';
     case 'server-console':
       return `/server/${encodeURIComponent(route.serverId)}/console`;
     case 'server-files':
@@ -175,6 +200,8 @@ function routeToPath(route: MainRoute): string {
       return `/server/${encodeURIComponent(route.serverId)}/settings`;
     case 'server-activity':
       return `/server/${encodeURIComponent(route.serverId)}/activity`;
+    case 'server-optimize':
+      return `/server/${encodeURIComponent(route.serverId)}/optimize`;
     case 'account':
       return '/account';
     case 'billing':
@@ -238,6 +265,16 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     }
   });
   const prevUnreadRef = useRef<number | null>(null);
+  const [autoOptimizeSettings, setAutoOptimizeSettings] = useState<AutoOptimizeSettings>(() =>
+    loadAutoOptimizeSettings()
+  );
+  const [optimizeHistory, setOptimizeHistory] = useState<OptimizeRunLogEntry[]>(() =>
+    loadOptimizeHistory()
+  );
+  const [isAutoOptimizing, setIsAutoOptimizing] = useState(false);
+  const autoOptRunningRef = useRef(false);
+  const serversRef = useRef<PterodactylServer[]>(servers);
+  serversRef.current = servers;
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -477,6 +514,141 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     setServers((prev) => prev.map((s) => (s.id === serverId ? { ...s, isFavorite: isFav } : s)));
   }, []);
 
+  useEffect(() => {
+    saveAutoOptimizeSettings(autoOptimizeSettings);
+  }, [autoOptimizeSettings]);
+
+  const appendOptimizeLog = useCallback((entry: OptimizeRunLogEntry) => {
+    setOptimizeHistory((prev) => {
+      const next = [entry, ...prev].slice(0, 60);
+      saveOptimizeHistory(next);
+      return next;
+    });
+  }, []);
+
+  const clearOptimizeHistory = useCallback(() => {
+    setOptimizeHistory([]);
+    saveOptimizeHistory([]);
+  }, []);
+
+  const toggleAutoOptimize = useCallback(
+    (enabled?: boolean) => {
+      setAutoOptimizeSettings((prev) => {
+        const nextVal = typeof enabled === 'boolean' ? enabled : !prev.enabled;
+        notify(
+          nextVal ? 'Auto-Optimize Enabled' : 'Auto-Optimize Paused',
+          nextVal
+            ? `Monitoring enabled servers every ${prev.intervalSeconds}s`
+            : 'Background server optimization is turned off.',
+          nextVal ? 'success' : 'info'
+        );
+        return { ...prev, enabled: nextVal };
+      });
+    },
+    [notify]
+  );
+
+  const toggleServerAutoOptimize = useCallback((serverId: string) => {
+    setAutoOptimizeSettings((prev) => {
+      const isDisabled = prev.disabledServerIds.includes(serverId);
+      const nextIds = isDisabled
+        ? prev.disabledServerIds.filter((id) => id !== serverId)
+        : [...prev.disabledServerIds, serverId];
+      return { ...prev, disabledServerIds: nextIds };
+    });
+  }, []);
+
+  // Background Auto-Optimize Monitor Loop
+  useEffect(() => {
+    if (!autoOptimizeSettings.enabled || !panelConnected) return;
+
+    const runAutoCycle = async () => {
+      if (autoOptRunningRef.current) return;
+      const list = serversRef.current;
+      if (!list || list.length === 0) return;
+
+      autoOptRunningRef.current = true;
+      setIsAutoOptimizing(true);
+      try {
+        const lastRunMap = loadLastAutoRunMap();
+        const now = Date.now();
+        const cooldownMs = autoOptimizeSettings.cooldownMinutes * 60 * 1000;
+
+        for (const srv of list) {
+          if (srv.isSuspended || srv.isInstalling || srv.isTransferring) continue;
+          if (autoOptimizeSettings.disabledServerIds.includes(srv.id)) continue;
+
+          const lastAt = lastRunMap[srv.id] || 0;
+          if (now - lastAt < cooldownMs) continue;
+
+          const cpuPct =
+            srv.limits.cpu > 0
+              ? (srv.resources.cpuPercent / srv.limits.cpu) * 100
+              : srv.resources.cpuPercent;
+          const memPct =
+            srv.limits.memory > 0
+              ? (srv.resources.memoryBytes / (srv.limits.memory * 1024 * 1024)) * 100
+              : 0;
+          const diskPct =
+            srv.limits.disk > 0
+              ? (srv.resources.diskBytes / (srv.limits.disk * 1024 * 1024)) * 100
+              : 0;
+
+          const needsOptimization =
+            cpuPct >= autoOptimizeSettings.cpuThreshold ||
+            memPct >= autoOptimizeSettings.ramThreshold ||
+            diskPct >= autoOptimizeSettings.diskThreshold ||
+            lastAt === 0;
+
+          if (!needsOptimization) continue;
+
+          const criticalRamRestart =
+            autoOptimizeSettings.autoRestartOnCriticalRam &&
+            srv.status === 'running' &&
+            memPct >= 95;
+
+          const result = await optimizeServer(
+            srv,
+            {
+              preset: autoOptimizeSettings.preset,
+              tuneConfigs: autoOptimizeSettings.autoTuneConfigs,
+              tuneStartupFlags: false,
+              cleanLogsAndCrash: autoOptimizeSettings.autoCleanLogs,
+              flushConsole: autoOptimizeSettings.autoFlushConsole,
+              ensureSchedule: false,
+              restartAfter: criticalRamRestart,
+            },
+            'auto'
+          );
+
+          lastRunMap[srv.id] = Date.now();
+          saveLastAutoRunMap(lastRunMap);
+
+          if (result.actions.length > 0 || result.status === 'error') {
+            appendOptimizeLog(result);
+            if (result.status === 'optimized') {
+              notify(
+                `Auto-Optimized ${srv.name}`,
+                result.actions.slice(0, 2).join(' · '),
+                'success'
+              );
+            }
+          }
+        }
+      } finally {
+        autoOptRunningRef.current = false;
+        setIsAutoOptimizing(false);
+      }
+    };
+
+    const initialTimer = setTimeout(runAutoCycle, 2500);
+    const interval = setInterval(runAutoCycle, autoOptimizeSettings.intervalSeconds * 1000);
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [autoOptimizeSettings, panelConnected, appendOptimizeLog, notify]);
+
   const activeServerId =
     route.page.startsWith('server-') && 'serverId' in route ? route.serverId : null;
 
@@ -528,6 +700,14 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
         refreshHelzerx,
         dismissedAnnouncements,
         dismissAnnouncement,
+        autoOptimizeSettings,
+        setAutoOptimizeSettings,
+        toggleAutoOptimize,
+        toggleServerAutoOptimize,
+        optimizeHistory,
+        appendOptimizeLog,
+        clearOptimizeHistory,
+        isAutoOptimizing,
       }}
     >
       {children}
