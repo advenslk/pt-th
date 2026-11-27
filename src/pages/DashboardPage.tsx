@@ -14,6 +14,7 @@ import { ServerCategoryIcon } from '../components/ui/ServerIcon';
 import { StatusText } from '../components/ui/StatusText';
 import { TelemetryChart } from '../components/ui/TelemetryChart';
 import { PanelConnectionNotice } from '../components/ui/PanelConnectionNotice';
+import defaultAvatar from '../assets/images/avatar_midnightx_user_1795748243919.jpg';
 
 export function DashboardPage() {
   const { servers, user, activityLogs, navigate, loading, panelConnected, connectionError } = usePanel();
@@ -96,7 +97,7 @@ export function DashboardPage() {
         <div className="flex items-center gap-4 min-w-0">
           <div className="w-12 h-12 rounded-2xl overflow-hidden ring-2 ring-[#171717] dark:ring-white/20 bg-[#171717] shrink-0 shadow-[0_6px_14px_rgba(0,0,0,0.22)]">
             <img
-              src="/src/assets/images/avatar_midnightx_user_1795748243919.jpg"
+              src={defaultAvatar}
               alt={displayName}
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover"

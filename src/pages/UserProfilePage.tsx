@@ -5,6 +5,7 @@ import { usePanel } from '../context/PanelContext';
 import type { ActivityLogEntry, ApiKeyEntry } from '../types/panel';
 import { formatRelativeTime } from '../utils/format';
 import { PanelConnectionNotice } from '../components/ui/PanelConnectionNotice';
+import defaultAvatar from '../assets/images/avatar_midnightx_user_1795748243919.jpg';
 
 export function UserProfilePage() {
   const { user, refreshData, notify, panelConnected, connectionError } = usePanel();
@@ -152,7 +153,7 @@ export function UserProfilePage() {
           <div className="flex items-center gap-4 pb-4 border-b border-black/[0.06] dark:border-white/[0.06]">
             <div className="w-14 h-14 rounded-2xl overflow-hidden ring-2 ring-[#171717] dark:ring-white/20 shrink-0 shadow-[0_6px_14px_rgba(0,0,0,0.22)]">
               <img
-                src="/src/assets/images/avatar_midnightx_user_1795748243919.jpg"
+                src={defaultAvatar}
                 alt={user?.username || 'User'}
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
