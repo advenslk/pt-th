@@ -21,6 +21,7 @@
         (isDark ? 'Light' : 'Dark') +
         '</span>';
       btn.setAttribute('aria-pressed', String(isDark));
+      btn.setAttribute('aria-label', isDark ? 'Switch Admin Panel to Light Mode' : 'Switch Admin Panel to Dark Mode');
       btn.title = isDark ? 'Switch Admin Panel to Light Mode' : 'Switch Admin Panel to Dark Mode';
     }
   }

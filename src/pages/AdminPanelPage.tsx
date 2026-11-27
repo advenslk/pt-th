@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Activity, HardDrive, MapPin, Server, Trash2, Users } from 'lucide-react';
+import { Activity, HardDrive, MapPin, Network, Server, Trash2, Users } from 'lucide-react';
 import { panelApi } from '../api/client';
 import { usePanel } from '../context/PanelContext';
 import type { AdminLocation, AdminNode, AdminUser, PterodactylServer } from '../types/panel';
@@ -99,25 +99,27 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
 
       {tab === 'overview' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5">
-            <div className="mx-card-3d p-4 rounded-2xl">
-              <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Total Users</div>
-              <div className="mt-1.5 text-2xl font-bold mx-stat-3d">{stats.totalUsers}</div>
-            </div>
-            <div className="mx-card-3d p-4 rounded-2xl">
-              <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Total Servers</div>
-              <div className="mt-1.5 text-2xl font-bold mx-stat-3d-violet">{stats.totalServers}</div>
-            </div>
-            <div className="mx-card-3d p-4 rounded-2xl">
-              <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Registered Nodes</div>
-              <div className="mt-1.5 text-2xl font-bold mx-stat-3d-cyan">{stats.totalNodes}</div>
-            </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+            {[
+              { label: 'Total Users', value: stats.totalUsers, icon: Users, accent: 'mx-stat-3d' },
+              { label: 'Total Servers', value: stats.totalServers, icon: Server, accent: 'mx-stat-3d-violet' },
+              { label: 'Registered Nodes', value: stats.totalNodes, icon: HardDrive, accent: 'mx-stat-3d-cyan' },
+              { label: 'Total Allocations', value: stats.totalAllocations, icon: Network, accent: 'mx-stat-3d' },
+            ].map(({ label, value, icon: Icon, accent }) => (
+              <div key={label} className="mx-card-3d p-4 rounded-2xl">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{label}</div>
+                  <Icon className="w-4 h-4 shrink-0 text-[#8B5CF6] dark:text-violet-400" />
+                </div>
+                <div className={`mt-1.5 text-2xl font-bold ${accent}`}>{value.toLocaleString()}</div>
+              </div>
+            ))}
           </div>
 
           <div className="mx-card-3d p-5 rounded-2xl space-y-3">
             <h2 className="mx-heading-3d text-sm font-bold">Node Capacity</h2>
             {nodes.length === 0 ? (
-              <div className="text-xs text-[#777777]">No nodes returned from Application API.</div>
+              <div className="text-xs text-[#777777] dark:text-zinc-400">No nodes returned from Application API.</div>
             ) : (
               nodes.map((n) => {
                 const memPct = n.memoryTotal > 0 ? Math.round((n.memoryAllocated / n.memoryTotal) * 100) : 0;
@@ -143,6 +145,10 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
 
       {tab === 'users' && (
         <div className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="mx-heading-3d text-sm font-bold">Users</h2>
+            <span className="text-[11px] text-[#777777] dark:text-zinc-400">{users.length} total</span>
+          </div>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
@@ -196,7 +202,7 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
           <div className="mx-card-3d rounded-2xl overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-black/[0.06] dark:border-white/[0.06] text-[11px] text-[#777777]">
+                <tr className="border-b border-black/[0.06] dark:border-white/[0.06] text-[11px] text-[#777777] dark:text-zinc-400">
                   <th className="py-3 px-4">Username</th>
                   <th className="py-3 px-3">Email</th>
                   <th className="py-3 px-3">Role</th>
@@ -205,6 +211,13 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/[0.05] dark:divide-white/[0.05]">
+                {users.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-8 px-4 text-center text-xs text-[#777777] dark:text-zinc-400">
+                      No users returned from Application API.
+                    </td>
+                  </tr>
+                )}
                 {users.map((u) => (
                   <tr key={u.id}>
                     <td className="py-3 px-4 font-medium">{u.username}</td>
@@ -222,6 +235,7 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
                             notify('Delete failed', err.message, 'error');
                           }
                         }}
+                        aria-label={`Delete user ${u.username}`}
                         className="mx-btn-3d p-1.5 rounded-lg text-rose-500 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -236,10 +250,15 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
       )}
 
       {tab === 'servers' && (
-        <div className="mx-card-3d rounded-2xl overflow-x-auto">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="mx-heading-3d text-sm font-bold">Servers</h2>
+            <span className="text-[11px] text-[#777777] dark:text-zinc-400">{servers.length} total</span>
+          </div>
+          <div className="mx-card-3d rounded-2xl overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-black/[0.06] dark:border-white/[0.06] text-[11px] text-[#777777]">
+              <tr className="border-b border-black/[0.06] dark:border-white/[0.06] text-[11px] text-[#777777] dark:text-zinc-400">
                 <th className="py-3 px-4">Server</th>
                 <th className="py-3 px-3">Identifier</th>
                 <th className="py-3 px-3">Status</th>
@@ -248,10 +267,17 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
               </tr>
             </thead>
             <tbody className="divide-y divide-black/[0.05] dark:divide-white/[0.05]">
+              {servers.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-8 px-4 text-center text-xs text-[#777777] dark:text-zinc-400">
+                    No servers returned from Application API.
+                  </td>
+                </tr>
+              )}
               {servers.map((s) => (
                 <tr key={s.id}>
                   <td className="py-3 px-4 font-medium">{s.name}</td>
-                  <td className="py-3 px-3 font-mono text-[11px] text-[#777777]">{s.identifier}</td>
+                  <td className="py-3 px-3 font-mono text-[11px] text-[#777777] dark:text-zinc-400">{s.identifier}</td>
                   <td className="py-3 px-3"><StatusText status={s.status} /></td>
                   <td className="py-3 px-3 text-right font-mono tabular-nums">
                     {formatMb(s.limits.memory)} · {s.limits.cpu}%
@@ -268,6 +294,7 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
                           notify('Delete failed', err.message, 'error');
                         }
                       }}
+                      aria-label={`Delete server ${s.name}`}
                       className="mx-btn-3d p-1.5 rounded-lg text-rose-500 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -277,17 +304,28 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
       {tab === 'nodes' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="mx-heading-3d text-sm font-bold">Nodes</h2>
+            <span className="text-[11px] text-[#777777] dark:text-zinc-400">{nodes.length} total</span>
+          </div>
+          {nodes.length === 0 && (
+            <div className="mx-card-3d p-8 rounded-2xl text-center text-xs text-[#777777] dark:text-zinc-400">
+              No nodes returned from Application API.
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {nodes.map((n) => (
             <div key={n.id} className="mx-card-3d p-5 rounded-2xl space-y-3 text-xs">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="text-sm font-semibold">{n.name}</div>
-                  <div className="font-mono text-[11px] text-[#777777]">{n.fqdn}</div>
+                  <div className="font-mono text-[11px] text-[#777777] dark:text-zinc-400">{n.fqdn}</div>
                 </div>
                 <span className={n.maintenanceMode ? 'text-amber-500 font-medium' : 'text-emerald-600 dark:text-emerald-400 font-medium'}>
                   {n.maintenanceMode ? 'Maintenance' : 'Online'}
@@ -299,13 +337,24 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
                 <div>Daemon: :{n.daemonListen}</div>
                 <div>SFTP: :{n.daemonSftp}</div>
               </div>
+              <div className="mx-well-3d h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400"
+                  style={{ width: `${n.memoryTotal > 0 ? Math.min(100, Math.round((n.memoryAllocated / n.memoryTotal) * 100)) : 0}%` }}
+                />
+              </div>
             </div>
           ))}
+          </div>
         </div>
       )}
 
       {tab === 'locations' && (
         <div className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="mx-heading-3d text-sm font-bold">Locations</h2>
+            <span className="text-[11px] text-[#777777] dark:text-zinc-400">{locations.length} total</span>
+          </div>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
@@ -340,13 +389,18 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
               Add Location
             </button>
           </form>
+          {locations.length === 0 && (
+            <div className="mx-card-3d p-8 rounded-2xl text-center text-xs text-[#777777] dark:text-zinc-400">
+              No locations returned from Application API.
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {locations.map((l) => (
               <div key={l.id} className="mx-card-3d p-5 rounded-2xl">
-                <div className="font-mono text-sm font-semibold text-[#8B5CF6]">{l.shortCode}</div>
+                <div className="font-mono text-sm font-semibold text-[#8B5CF6] dark:text-violet-400">{l.shortCode}</div>
                 <div className="text-xs text-[#777777] dark:text-zinc-400 mt-1">{l.description}</div>
-                <div className="mt-3 text-[11px] font-mono text-[#777777]">
-                  {l.nodesCount} node(s)
+                <div className="mt-3 text-[11px] font-mono text-[#777777] dark:text-zinc-400">
+                  {l.nodesCount} {l.nodesCount === 1 ? 'node' : 'nodes'}
                 </div>
               </div>
             ))}
