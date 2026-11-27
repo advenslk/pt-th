@@ -9,6 +9,7 @@ import {
   Square,
   Star,
   TerminalSquare,
+  Zap,
 } from 'lucide-react';
 import { usePanel } from '../context/PanelContext';
 import type { ServerCategory, ServerStatus } from '../types/panel';
@@ -69,27 +70,37 @@ export function ServersPage() {
           </p>
         </div>
 
-        <div className="mx-well-3d inline-flex items-center p-1 rounded-xl gap-1">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setViewMode('grid')}
-            aria-label="Grid view"
-            className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-              viewMode === 'grid' ? 'mx-btn-3d' : 'text-[#777777] dark:text-zinc-400'
-            }`}
+            onClick={() => navigate({ page: 'optimize' })}
+            className="mx-btn-3d inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer"
           >
-            <LayoutGrid className="w-4 h-4" />
+            <Zap className="w-3.5 h-3.5 text-[#8B5CF6]" />
+            Optimizer
           </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('list')}
-            aria-label="List view"
-            className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-              viewMode === 'list' ? 'mx-btn-3d' : 'text-[#777777] dark:text-zinc-400'
-            }`}
-          >
-            <List className="w-4 h-4" />
-          </button>
+          <div className="mx-well-3d inline-flex items-center p-1 rounded-xl gap-1">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                viewMode === 'grid' ? 'mx-btn-3d' : 'text-[#777777] dark:text-zinc-400'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              aria-label="List view"
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                viewMode === 'list' ? 'mx-btn-3d' : 'text-[#777777] dark:text-zinc-400'
+              }`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -292,6 +303,14 @@ export function ServersPage() {
                     )}
                     <button
                       type="button"
+                      title="Optimize Server"
+                      onClick={() => navigate({ page: 'server-optimize', serverId: srv.id })}
+                      className="mx-btn-3d p-1.5 rounded-lg cursor-pointer"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                    </button>
+                    <button
+                      type="button"
                       title="Open Files"
                       onClick={() => navigate({ page: 'server-files', serverId: srv.id })}
                       className="mx-btn-3d p-1.5 rounded-lg cursor-pointer"
@@ -370,6 +389,14 @@ export function ServersPage() {
                         className="mx-btn-3d p-1.5 rounded-lg cursor-pointer"
                       >
                         <Star className={`w-3.5 h-3.5 ${srv.isFavorite ? 'fill-amber-400 text-amber-400' : 'text-[#777777]'}`} />
+                      </button>
+                      <button
+                        type="button"
+                        title="Optimize Server"
+                        onClick={() => navigate({ page: 'server-optimize', serverId: srv.id })}
+                        className="mx-btn-3d p-1.5 rounded-lg cursor-pointer"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-[#8B5CF6]" />
                       </button>
                       <button
                         type="button"

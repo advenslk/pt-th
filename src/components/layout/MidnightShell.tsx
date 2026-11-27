@@ -33,6 +33,7 @@ import {
   User,
   Users,
   X,
+  Zap,
 } from 'lucide-react';
 import { helzerxApi } from '../../api/helzerx';
 import { panelApi } from '../../api/client';
@@ -77,6 +78,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
     refreshHelzerx,
     dismissedAnnouncements,
     dismissAnnouncement,
+    autoOptimizeSettings,
   } = usePanel();
 
   const [treeSearch, setTreeSearch] = useState('');
@@ -125,6 +127,8 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
         return ['HelzerX', 'Dashboard'];
       case 'servers':
         return ['HelzerX', 'Servers'];
+      case 'optimize':
+        return ['HelzerX', 'Server Optimizer'];
       case 'server-console':
         return ['Servers', activeServer?.name || route.serverId, 'Console'];
       case 'server-files':
@@ -145,6 +149,8 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
         return ['Servers', activeServer?.name || route.serverId, 'Settings'];
       case 'server-activity':
         return ['Servers', activeServer?.name || route.serverId, 'Activity'];
+      case 'server-optimize':
+        return ['Servers', activeServer?.name || route.serverId, 'Optimize'];
       case 'account':
         return ['HelzerX', 'Account Security'];
       case 'billing':
@@ -369,6 +375,13 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               count={servers.length}
               onClick={() => navigate({ page: 'servers' })}
             />
+            <NavRow
+              label={t('nav.optimize')}
+              icon={Zap}
+              active={route.page === 'optimize'}
+              count={autoOptimizeSettings.enabled ? 'AUTO' : undefined}
+              onClick={() => navigate({ page: 'optimize' })}
+            />
             {isManagingServer && targetServerId && (
               <>
                 <NavRow
@@ -446,6 +459,13 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
                 icon={Activity}
                 active={route.page === 'server-activity'}
                 onClick={() => navigate({ page: 'server-activity', serverId: targetServerId })}
+              />
+              <NavRow
+                label={t('nav.optimize')}
+                icon={Zap}
+                active={route.page === 'server-optimize'}
+                count={autoOptimizeSettings.enabled && !autoOptimizeSettings.disabledServerIds.includes(targetServerId) ? 'ON' : undefined}
+                onClick={() => navigate({ page: 'server-optimize', serverId: targetServerId })}
               />
             </div>
           </div>
