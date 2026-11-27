@@ -61,6 +61,15 @@ export function DashboardPage() {
   const [apiKeys, setApiKeys] = useState<ApiKeyEntry[]>([]);
   const [sshKeys, setSshKeys] = useState<SshKeyEntry[]>([]);
 
+  // Hooks must run in the same order on every render. Keep this above the
+  // loading / connection-error early returns below, otherwise React throws
+  // error #310 ("Rendered more hooks than during the previous render") when
+  // loading flips from true to false and the whole app goes blank.
+  const securityAssessment = useMemo(
+    () => computeSecurityScore(user, apiKeys, sshKeys),
+    [user, apiKeys, sshKeys]
+  );
+
   const showSecurityWidget = !dashboardPrefs.hiddenWidgets.includes('security');
 
   useEffect(() => {
@@ -144,10 +153,6 @@ export function DashboardPage() {
   const primaryServer = servers[0];
   const displayName = user ? `${user.firstName} ${user.lastName}`.trim() || user.username : 'User';
   const greetingText = dashboardPrefs.customGreeting.trim() || t('dash.welcome');
-  const securityAssessment = useMemo(
-    () => computeSecurityScore(user, apiKeys, sshKeys),
-    [user, apiKeys, sshKeys]
-  );
 
   const moveWidget = (id: DashboardWidgetId, dir: -1 | 1) => {
     setDashboardPrefs((prev) => {

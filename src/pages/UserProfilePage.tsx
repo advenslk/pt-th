@@ -62,6 +62,25 @@ export function UserProfilePage() {
   const [sshName, setSshName] = useState('');
   const [sshPublicKey, setSshPublicKey] = useState('');
 
+  // Keep all hooks before the connection-error early return below so React's
+  // hook order never changes between renders (error #310 / blank panel).
+  const securityAssessment = useMemo(
+    () => computeSecurityScore(user, apiKeys, sshKeys),
+    [user, apiKeys, sshKeys]
+  );
+  const passwordStrength = useMemo(
+    () => evaluatePasswordStrength(newPassword),
+    [newPassword]
+  );
+  const filteredActivity = useMemo(() => {
+    const q = activitySearch.trim().toLowerCase();
+    return activity.filter((item) => {
+      if (activityCategory !== 'all' && item.category !== activityCategory) return false;
+      if (!q) return true;
+      return `${item.event} ${item.ip} ${item.target || ''}`.toLowerCase().includes(q);
+    });
+  }, [activity, activitySearch, activityCategory]);
+
   const loadAccountExtras = useCallback(async () => {
     if (!panelConnected) return;
     try {
@@ -197,25 +216,6 @@ export function UserProfilePage() {
       notify('Could not remove SSH key', err.message, 'error');
     }
   };
-
-  const securityAssessment = useMemo(
-    () => computeSecurityScore(user, apiKeys, sshKeys),
-    [user, apiKeys, sshKeys]
-  );
-
-  const passwordStrength = useMemo(
-    () => evaluatePasswordStrength(newPassword),
-    [newPassword]
-  );
-
-  const filteredActivity = useMemo(() => {
-    const q = activitySearch.trim().toLowerCase();
-    return activity.filter((item) => {
-      if (activityCategory !== 'all' && item.category !== activityCategory) return false;
-      if (!q) return true;
-      return `${item.event} ${item.ip} ${item.target || ''}`.toLowerCase().includes(q);
-    });
-  }, [activity, activitySearch, activityCategory]);
 
   return (
     <div className="space-y-6">
