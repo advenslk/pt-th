@@ -22,9 +22,10 @@ chown -R www-data:www-data "$THEME_DIR"
 
 echo "==> Refreshing Laravel caches"
 cd "$PANEL_DIR"
-php artisan view:clear
-php artisan route:clear
-php artisan view:cache
-php artisan route:cache
+chown -R www-data:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
+runuser -u www-data -- php artisan view:clear
+runuser -u www-data -- php artisan route:clear
+runuser -u www-data -- php artisan view:cache
+runuser -u www-data -- php artisan route:cache
 
 echo "==> Done. MidnightX is the default theme (use ?classic=1 for the original UI)."

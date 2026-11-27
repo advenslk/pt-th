@@ -7,10 +7,11 @@ PANEL_DIR="${PANEL_DIR:-/var/www/pterodactyl}"
 
 echo "==> Refreshing Laravel caches"
 cd "$PANEL_DIR"
-php artisan optimize:clear >/dev/null 2>&1 || true
-php artisan view:cache
-php artisan route:cache
-php artisan queue:restart || true
+chown -R www-data:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
+runuser -u www-data -- php artisan optimize:clear >/dev/null 2>&1 || true
+runuser -u www-data -- php artisan view:cache
+runuser -u www-data -- php artisan route:cache
+runuser -u www-data -- php artisan queue:restart || true
 
 echo "==> Reloading web services"
 nginx -t
