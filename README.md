@@ -93,6 +93,17 @@ Typical workflow after you edit the theme from another machine:
 ./reset.sh
 ```
 
+### If the panel still looks old
+
+1. Check `./status.sh` — compare **local commit** and **github commit**. If `pull.sh` printed
+   `No new commits on GitHub`, your changes were never pushed (often an expired GitHub token).
+   Run `./push.sh "message"` from the machine where you edited, then `./pull.sh` here.
+2. Make sure the browser URL is `https://spg.helzerx.cyou/` and **not**
+   `https://spg.helzerx.cyou/?classic=1` — the latter deliberately loads the old UI.
+3. Hard-refresh once (Ctrl+F5). Asset URLs include a `?v=` file timestamp, so a stale
+   browser cache should not normally be possible.
+4. `./status.sh` prints `built asset` and `deployed at` — compare those with your last build.
+
 Manual equivalents (no scripts):
 
 ```bash
