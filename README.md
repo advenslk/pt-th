@@ -134,5 +134,6 @@ cd /var/www/pterodactyl && php artisan view:clear && php artisan route:clear && 
 
 ### Full server management
 
-MidnightX natively implements the complete Pterodactyl Panel v1.15.2 client experience: Console, File Manager, Databases, Schedules & Tasks, Sub-Users & Permissions, Backups, Network Allocations, Startup & Docker Images, Server Settings & SFTP, Server Activity Logs, and Account Security (2FA, API Keys, SSH Keys). The **Admin Panel** sidebar link opens `/admin` in a new tab.
+MidnightX natively implements the complete Pterodactyl Panel v1.15.2 client experience: Console, File Manager, Databases, Schedules & Tasks, Sub-Users & Permissions, Backups, Network Allocations, Startup & Docker Images, Server Settings & SFTP, Server Activity Logs, and Account Security (2FA, API Keys, SSH Keys). The **Admin Panel** sidebar link opens `/admin` in a new tab, and `./deploy.sh` / `./pull.sh` automatically applies the MidnightX 3D RGB theme (`admin-theme.css` / `admin-theme.js`) onto Pterodactyl's native `/admin` interface without altering any admin functionality.
+
 

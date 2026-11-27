@@ -28,8 +28,44 @@ if [[ -z "$JS" || -z "$CSS" ]]; then
   exit 1
 fi
 date -u +'%Y-%m-%dT%H:%M:%SZ' > "$THEME_DIR/.deployed-at"
+DEPLOY_TS="$(date +%s)"
 echo "==> Installed JS: $JS"
 echo "==> Installed CSS: $CSS"
+
+ADMIN_BLADE="$PANEL_DIR/resources/views/layouts/admin.blade.php"
+if [[ -f "$ADMIN_BLADE" ]]; then
+  BACKUP_DIR="$(ls -dt /root/midnightx-install-backup-* 2>/dev/null | head -1 || true)"
+  if [[ -z "$BACKUP_DIR" ]]; then
+    BACKUP_DIR="/root/midnightx-install-backup-admin"
+    mkdir -p "$BACKUP_DIR"
+  fi
+  if [[ ! -f "$BACKUP_DIR/admin.blade.php" ]] && ! grep -q '<!-- MidnightX Admin Theme -->' "$ADMIN_BLADE"; then
+    cp "$ADMIN_BLADE" "$BACKUP_DIR/admin.blade.php"
+  fi
+
+  echo "==> Applying MidnightX Admin Panel theme to $ADMIN_BLADE"
+  ADMIN_BLADE_PATH="$ADMIN_BLADE" DEPLOY_TS="$DEPLOY_TS" node -e '
+    const fs = require("fs");
+    const file = process.env.ADMIN_BLADE_PATH;
+    const ts = process.env.DEPLOY_TS;
+    let html = fs.readFileSync(file, "utf8");
+    html = html.replace(/\n?\s*<!-- MidnightX Admin Theme -->[\s\S]*?<!-- \/MidnightX Admin Theme -->\s*/g, "\n");
+    const block = [
+      "        <!-- MidnightX Admin Theme -->",
+      "        <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />",
+      "        <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />",
+      "        <link href=\"https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700&display=swap\" rel=\"stylesheet\" />",
+      "        <script src=\"/midnightx/admin-theme.js?v=" + ts + "\"></script>",
+      "        <link rel=\"stylesheet\" href=\"/midnightx/admin-theme.css?v=" + ts + "\" />",
+      "        <!-- /MidnightX Admin Theme -->",
+      "    </head>"
+    ].join("\n");
+    if (html.includes("</head>")) {
+      html = html.replace("</head>", block);
+      fs.writeFileSync(file, html, "utf8");
+    }
+  '
+fi
 
 echo "==> Refreshing Laravel caches"
 cd "$PANEL_DIR"
@@ -39,4 +75,4 @@ runuser -u www-data -- php artisan route:clear
 runuser -u www-data -- php artisan view:cache
 runuser -u www-data -- php artisan route:cache
 
-echo "==> Done. Open https://spg.helzerx.cyou/ (NOT /?classic=1) and hard-refresh once."
+echo "==> Done. Open https://spg.helzerx.cyou/ (and /admin) and hard-refresh once."

@@ -17,10 +17,24 @@ if [[ -z "$BACKUP_DIR" || ! -d "$BACKUP_DIR" ]]; then
 fi
 
 echo "==> Restoring from $BACKUP_DIR"
-cp "$BACKUP_DIR/wrapper.blade.php" "$PANEL_DIR/resources/views/templates/wrapper.blade.php"
+if [[ -f "$BACKUP_DIR/wrapper.blade.php" ]]; then
+  cp "$BACKUP_DIR/wrapper.blade.php" "$PANEL_DIR/resources/views/templates/wrapper.blade.php"
+fi
 
 if [[ -f "$BACKUP_DIR/base-routes.php" ]]; then
   cp "$BACKUP_DIR/base-routes.php" "$PANEL_DIR/routes/base.php"
+fi
+
+ADMIN_BLADE="$PANEL_DIR/resources/views/layouts/admin.blade.php"
+if [[ -f "$BACKUP_DIR/admin.blade.php" ]]; then
+  cp "$BACKUP_DIR/admin.blade.php" "$ADMIN_BLADE"
+elif [[ -f "$ADMIN_BLADE" ]] && command -v node >/dev/null 2>&1; then
+  ADMIN_BLADE_PATH="$ADMIN_BLADE" node -e '
+    const fs = require("fs");
+    const file = process.env.ADMIN_BLADE_PATH;
+    const html = fs.readFileSync(file, "utf8").replace(/\n?\s*<!-- MidnightX Admin Theme -->[\s\S]*?<!-- \/MidnightX Admin Theme -->\s*/g, "\n");
+    fs.writeFileSync(file, html, "utf8");
+  '
 fi
 
 echo "==> Refreshing Laravel caches"
