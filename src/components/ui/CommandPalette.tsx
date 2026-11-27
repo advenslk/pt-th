@@ -247,7 +247,7 @@ export function CommandPalette() {
         id: 'act:theme-toggle',
         group: 'Actions',
         label: `Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`,
-        subtitle: 'Toggle MidnightX appearance',
+        subtitle: 'Toggle HelzerX appearance',
         keywords: 'theme dark light appearance mode',
         icon: SunMoon,
         onSelect: () => {

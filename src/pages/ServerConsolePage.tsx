@@ -182,10 +182,10 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
               }
             } else if (eventName === 'install started') {
               setIsInstalling(true);
-              appendConsoleLines('[MidnightX]: Server installation started.', 'daemon message');
+              appendConsoleLines('[HelzerX]: Server installation started.', 'daemon message');
             } else if (eventName === 'install completed') {
               setIsInstalling(false);
-              appendConsoleLines('[MidnightX]: Server installation completed.', 'daemon message');
+              appendConsoleLines('[HelzerX]: Server installation completed.', 'daemon message');
               refreshData();
             } else if (eventName === 'backup completed') {
               notify('Backup completed', 'Archive finished on Wings daemon', 'success');
@@ -245,7 +245,7 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
       } catch (err: any) {
         setWsConnected(false);
         setWsError(err.message);
-        appendConsoleLines(`[MidnightX]: Unable to establish Wings WebSocket (${err.message}).`, 'daemon error');
+        appendConsoleLines(`[HelzerX]: Unable to establish Wings WebSocket (${err.message}).`, 'daemon error');
         if (!cancelled) {
           setWsReconnecting(true);
           const delay = Math.min(15000, 2500 * Math.pow(1.5, retryCountRef.current));
@@ -307,7 +307,7 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
   const handleAcceptEula = async (shouldStart = true) => {
     setAcceptingEula(true);
     try {
-      let nextContent = '# Accepted via MidnightX Panel\neula=true\n';
+      let nextContent = '# Accepted via HelzerX Panel\neula=true\n';
       try {
         const existing = await panelApi.getFileContents(server.id, '/eula.txt');
         if (existing) {
@@ -323,7 +323,7 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
       setEulaModalOpen(false);
       setEulaDetected(false);
       setEulaDismissed(false);
-      appendConsoleLines('[MidnightX]: Updated /eula.txt (eula=true).', 'daemon message');
+      appendConsoleLines('[HelzerX]: Updated /eula.txt (eula=true).', 'daemon message');
       notify('Minecraft EULA accepted', 'Saved eula=true to /eula.txt', 'success');
 
       if (shouldStart) {
@@ -611,7 +611,7 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
                 Minecraft EULA
                 <ExternalLink className="w-3 h-3" />
               </a>
-              . MidnightX will automatically update <span className="font-mono">/eula.txt</span> to{' '}
+              . HelzerX will automatically update <span className="font-mono">/eula.txt</span> to{' '}
               <span className="font-mono">eula=true</span> and start your server.
             </p>
 

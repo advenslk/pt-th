@@ -297,7 +297,7 @@ export function exportAccountDataJson(payload: {
 }) {
   const exportObj = {
     exportedAt: new Date().toISOString(),
-    panel: 'MidnightX / Pterodactyl 1.15.2',
+    panel: 'HelzerX / Pterodactyl 1.15.2',
     account: payload.user
       ? {
           id: payload.user.id,

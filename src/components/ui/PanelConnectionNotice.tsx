@@ -28,7 +28,7 @@ export function PanelConnectionNotice({ message }: { message: string }) {
         <div className="space-y-2 text-[#525252] dark:text-zinc-300 leading-relaxed">
           <p>
             <span className="font-semibold text-[#171717] dark:text-white">1. Install inside Pterodactyl Panel:</span>{' '}
-            Build the frontend (`npm run build`) and serve the bundle inside your Pterodactyl `/var/www/pterodactyl` installation. MidnightX automatically authenticates using Laravel&apos;s `XSRF-TOKEN` session cookie and connects directly to `/api/client/*`, `/api/application/*`, and Wings WebSockets.
+            Build the frontend (`npm run build`) and serve the bundle inside your Pterodactyl `/var/www/pterodactyl` installation. HelzerX automatically authenticates using Laravel&apos;s `XSRF-TOKEN` session cookie and connects directly to `/api/client/*`, `/api/application/*`, and Wings WebSockets.
           </p>
           <p>
             <span className="font-semibold text-[#171717] dark:text-white">2. Standalone Proxy Mode:</span>{' '}

@@ -6,7 +6,7 @@ import './index.css';
 const mountNode = document.getElementById('app') || document.getElementById('root');
 
 if (!mountNode) {
-    throw new Error('MidnightX mount node (#app or #root) was not found.');
+    throw new Error('HelzerX mount node (#app or #root) was not found.');
 }
 
 createRoot(mountNode).render(<App />);
