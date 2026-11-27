@@ -12,6 +12,27 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet" />
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem('midnightx_theme_mode');
+          var legacy = localStorage.getItem('midnightx_theme');
+          var resolved =
+            mode === 'light' || mode === 'dark'
+              ? mode
+              : mode === 'auto'
+                ? window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+                  ? 'dark'
+                  : 'light'
+                : legacy === 'light' || legacy === 'dark'
+                  ? legacy
+                  : 'dark';
+          document.documentElement.classList.toggle('dark', resolved === 'dark');
+        } catch (_) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
   <body class="antialiased selection:bg-violet-500/20 selection:text-violet-700 dark:selection:text-violet-300">
     <div id="root"></div>

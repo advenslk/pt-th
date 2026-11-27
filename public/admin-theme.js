@@ -3,6 +3,11 @@
 
   function getStoredTheme() {
     try {
+      var mode = localStorage.getItem('midnightx_theme_mode');
+      if (mode === 'light' || mode === 'dark') return mode;
+      if (mode === 'auto' && window.matchMedia) {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
       return localStorage.getItem(STORAGE_KEY) || 'dark';
     } catch (_) {
       return 'dark';
@@ -85,6 +90,7 @@
         var next = document.documentElement.classList.contains('mx-admin-dark') ? 'light' : 'dark';
         try {
           localStorage.setItem(STORAGE_KEY, next);
+          localStorage.setItem('midnightx_theme_mode', next);
         } catch (_) {}
         applyAdminTheme(next);
       });
