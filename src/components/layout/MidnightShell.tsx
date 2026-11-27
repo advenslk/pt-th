@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from 'motion/react';
 import {
   Activity,
   Archive,
+  Award,
+  Bell,
   CalendarClock,
   ChevronDown,
   ChevronRight,
@@ -13,7 +15,9 @@ import {
   Home,
   LifeBuoy,
   LogOut,
+  Megaphone,
   Menu,
+  MessageSquare,
   Moon,
   Network,
   Play,
@@ -30,6 +34,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { helzerxApi } from '../../api/helzerx';
 import { panelApi } from '../../api/client';
 import { usePanel, type MainRoute } from '../../context/PanelContext';
 import { getRouteMetadata } from '../../utils/userPreferences';
@@ -68,10 +73,15 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
     toggleFavoritePage,
     setCommandPaletteOpen,
     notify,
+    helzerxData,
+    refreshHelzerx,
+    dismissedAnnouncements,
+    dismissAnnouncement,
   } = usePanel();
 
   const [treeSearch, setTreeSearch] = useState('');
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     'Game Servers': true,
     Applications: true,
@@ -141,10 +151,32 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
         return ['HelzerX', 'Billing'];
       case 'support':
         return ['HelzerX', 'Support'];
+      case 'rewards':
+        return ['HelzerX', 'Rewards & VIP'];
+      case 'community':
+        return ['HelzerX', 'Community'];
+      case 'updates':
+        return ['HelzerX', 'Updates & Status'];
       case 'admin':
         return ['Administration', (route.section || 'Overview').replace(/^\w/, (c) => c.toUpperCase())];
     }
   }, [route, activeServer]);
+
+  const bannerAnnouncements = useMemo(
+    () =>
+      (helzerxData?.activeAnnouncements || []).filter(
+        (a) => a.displayMode === 'banner' && !dismissedAnnouncements.includes(a.id)
+      ),
+    [helzerxData?.activeAnnouncements, dismissedAnnouncements]
+  );
+
+  const popupAnnouncement = useMemo(
+    () =>
+      (helzerxData?.activeAnnouncements || []).find(
+        (a) => a.displayMode === 'popup' && !dismissedAnnouncements.includes(a.id)
+      ) || null,
+    [helzerxData?.activeAnnouncements, dismissedAnnouncements]
+  );
 
   const NavRow = ({
     label,
@@ -433,6 +465,25 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               icon={LifeBuoy}
               active={route.page === 'support'}
               onClick={() => navigate({ page: 'support' })}
+            />
+            <NavRow
+              label={t('nav.rewards')}
+              icon={Award}
+              active={route.page === 'rewards'}
+              onClick={() => navigate({ page: 'rewards' })}
+            />
+            <NavRow
+              label={t('nav.community')}
+              icon={MessageSquare}
+              active={route.page === 'community'}
+              onClick={() => navigate({ page: 'community' })}
+            />
+            <NavRow
+              label={t('nav.updates')}
+              icon={Bell}
+              active={route.page === 'updates'}
+              count={helzerxData?.unreadNotifications ? helzerxData.unreadNotifications : undefined}
+              onClick={() => navigate({ page: 'updates' })}
             />
             <NavRow
               label={t('nav.settings')}
@@ -724,6 +775,79 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
                 />
               </button>
 
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setNotifMenuOpen((o) => !o)}
+                  title="Notifications"
+                  aria-label="Notifications"
+                  className="mx-btn-3d relative inline-flex items-center justify-center w-8 h-8 rounded-xl cursor-pointer shrink-0"
+                >
+                  <Bell className="w-3.5 h-3.5 text-[#06B6D4]" />
+                  {(helzerxData?.unreadNotifications || 0) > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#8B5CF6] text-white text-[10px] font-bold flex items-center justify-center">
+                      {helzerxData!.unreadNotifications > 9 ? '9+' : helzerxData!.unreadNotifications}
+                    </span>
+                  )}
+                </button>
+
+                {notifMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-80 max-w-[90vw] mx-card-3d rounded-2xl p-3 space-y-2.5 shadow-2xl z-50">
+                    <div className="flex items-center justify-between text-xs pb-2 border-b border-black/[0.06] dark:border-white/[0.06]">
+                      <span className="font-bold">Notifications</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await helzerxApi.readAllNotifications();
+                            await refreshHelzerx();
+                          }}
+                          className="text-[11px] text-[#8B5CF6] hover:underline cursor-pointer"
+                        >
+                          Mark all read
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNotifMenuOpen(false);
+                            navigate({ page: 'updates' });
+                          }}
+                          className="text-[11px] text-[#06B6D4] hover:underline cursor-pointer"
+                        >
+                          Open Hub
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                      {(helzerxData?.notifications || []).length === 0 ? (
+                        <div className="py-4 text-center text-xs text-[#777777]">No notifications yet.</div>
+                      ) : (
+                        (helzerxData?.notifications || []).slice(0, 6).map((n) => (
+                          <button
+                            key={n.id}
+                            type="button"
+                            onClick={async () => {
+                              setNotifMenuOpen(false);
+                              if (!n.read) {
+                                await helzerxApi.readNotification(n.id).catch(() => {});
+                                refreshHelzerx();
+                              }
+                              navigate({ page: n.linkPage || 'updates' });
+                            }}
+                            className={`w-full text-left p-2 rounded-xl text-xs transition-colors cursor-pointer ${
+                              n.read ? 'opacity-70 hover:bg-black/[0.04] dark:hover:bg-white/[0.04]' : 'mx-well-3d'
+                            }`}
+                          >
+                            <div className="font-semibold truncate">{n.title}</div>
+                            <div className="text-[11px] text-[#777777] dark:text-zinc-400 truncate">{n.body}</div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <LanguageSelector />
 
               <button
@@ -744,10 +868,93 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
           </header>
 
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-7">
-            <div className="max-w-[1360px] mx-auto">{children}</div>
+            <div className="max-w-[1360px] mx-auto space-y-5">
+              {bannerAnnouncements.length > 0 && (
+                <div className="mx-card-3d px-4 py-3 rounded-2xl flex items-center justify-between gap-3 border border-[#8B5CF6]/30">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Megaphone className="w-4 h-4 text-[#8B5CF6] shrink-0" />
+                    <div className="min-w-0 text-xs">
+                      <span className="font-bold text-[#171717] dark:text-white mr-2">
+                        {bannerAnnouncements[0].title}:
+                      </span>
+                      <span className="text-[#525252] dark:text-zinc-300">
+                        {bannerAnnouncements[0].body}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => navigate({ page: 'updates' })}
+                      className="mx-btn-3d px-2.5 py-1 rounded-lg text-[11px] cursor-pointer"
+                    >
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dismissAnnouncement(bannerAnnouncements[0].id)}
+                      aria-label="Dismiss announcement"
+                      className="mx-btn-3d p-1 rounded-lg cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              {children}
+            </div>
           </main>
         </div>
       </div>
+
+      {popupAnnouncement && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-xs"
+          onClick={() => dismissAnnouncement(popupAnnouncement.id)}
+        >
+          <div
+            className="mx-card-3d w-full max-w-md p-6 rounded-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-2 text-xs font-bold text-[#8B5CF6]">
+                <Megaphone className="w-4 h-4" />
+                {popupAnnouncement.category} Announcement
+              </span>
+              <button
+                type="button"
+                onClick={() => dismissAnnouncement(popupAnnouncement.id)}
+                className="mx-btn-3d p-1 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <h3 className="mx-heading-3d text-base font-bold">{popupAnnouncement.title}</h3>
+            <p className="text-xs text-[#525252] dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
+              {popupAnnouncement.body}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  dismissAnnouncement(popupAnnouncement.id);
+                  navigate({ page: 'updates' });
+                }}
+                className="mx-btn-3d px-3.5 py-2 rounded-xl text-xs cursor-pointer"
+              >
+                Read Updates
+              </button>
+              <button
+                type="button"
+                onClick={() => dismissAnnouncement(popupAnnouncement.id)}
+                className="mx-btn-3d-primary px-4 py-2 rounded-xl text-xs font-medium cursor-pointer"
+              >
+                Acknowledge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notifications */}
       {toasts.length > 0 && (

@@ -1,6 +1,8 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { PanelApiError, panelApi, toggleLocalFavorite } from '../api/client';
+import { helzerxApi } from '../api/helzerx';
 import { getLanguageOption, translate, type TranslationKey } from '../i18n/translations';
+import type { HelzerxBootstrapResponse } from '../types/helzerx';
 import type { ActivityLogEntry, PowerSignal, PterodactylServer, UserProfile } from '../types/panel';
 import {
   getRouteMetadata,
@@ -36,6 +38,9 @@ export type MainRoute =
   | { page: 'account' }
   | { page: 'billing' }
   | { page: 'support' }
+  | { page: 'rewards' }
+  | { page: 'community' }
+  | { page: 'updates' }
   | { page: 'admin'; section?: string };
 
 export interface ToastMessage {
@@ -83,9 +88,34 @@ interface PanelContextValue {
   recentPages: SavedPageRef[];
   commandPaletteOpen: boolean;
   setCommandPaletteOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  helzerxData: HelzerxBootstrapResponse | null;
+  refreshHelzerx: () => Promise<void>;
+  dismissedAnnouncements: string[];
+  dismissAnnouncement: (id: string) => void;
 }
 
 const PanelContext = createContext<PanelContextValue | null>(null);
+
+function playNotificationChime() {
+  try {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(660, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(980, ctx.currentTime + 0.14);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.24);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.25);
+  } catch {
+    // ignore audio errors
+  }
+}
 
 function parsePathname(pathname: string): MainRoute {
   const clean = pathname.replace(/\/+$/, '') || '/';
@@ -94,6 +124,9 @@ function parsePathname(pathname: string): MainRoute {
   if (clean === '/account' || clean.startsWith('/account/')) return { page: 'account' };
   if (clean === '/billing') return { page: 'billing' };
   if (clean === '/support') return { page: 'support' };
+  if (clean === '/rewards') return { page: 'rewards' };
+  if (clean === '/community') return { page: 'community' };
+  if (clean === '/updates') return { page: 'updates' };
   if (clean.startsWith('/admin')) {
     const parts = clean.split('/').filter(Boolean);
     return { page: 'admin', section: parts[1] || 'overview' };
@@ -148,6 +181,12 @@ function routeToPath(route: MainRoute): string {
       return '/billing';
     case 'support':
       return '/support';
+    case 'rewards':
+      return '/rewards';
+    case 'community':
+      return '/community';
+    case 'updates':
+      return '/updates';
     case 'admin':
       return route.section && route.section !== 'overview' ? `/admin/${route.section}` : '/admin';
   }
@@ -189,6 +228,16 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
   const [favoritePages, setFavoritePages] = useState<SavedPageRef[]>(() => loadFavoritePages());
   const [recentPages, setRecentPages] = useState<SavedPageRef[]>(() => loadRecentPages());
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [helzerxData, setHelzerxData] = useState<HelzerxBootstrapResponse | null>(null);
+  const [dismissedAnnouncements, setDismissedAnnouncements] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('helzerx_dismissed_anns');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  const prevUnreadRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -233,6 +282,12 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     saveDashboardPrefs(dashboardPrefs);
+    const root = document.documentElement;
+    if (!dashboardPrefs.bgPreset || dashboardPrefs.bgPreset === 'default') {
+      root.removeAttribute('data-bg-preset');
+    } else {
+      root.setAttribute('data-bg-preset', dashboardPrefs.bgPreset);
+    }
   }, [dashboardPrefs]);
 
   useEffect(() => {
@@ -315,7 +370,46 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     [servers]
   );
 
+  const dismissAnnouncement = useCallback((id: string) => {
+    setDismissedAnnouncements((prev) => {
+      const next = prev.includes(id) ? prev : [...prev, id].slice(-30);
+      try {
+        localStorage.setItem('helzerx_dismissed_anns', JSON.stringify(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+    helzerxApi.markAnnouncementRead(id).catch(() => {});
+  }, []);
+
+  const refreshHelzerx = useCallback(async () => {
+    try {
+      const data = await helzerxApi.getBootstrap();
+      setHelzerxData(data);
+      if (
+        prevUnreadRef.current !== null &&
+        data.unreadNotifications > prevUnreadRef.current
+      ) {
+        if (data.notificationPrefs?.soundEnabled) playNotificationChime();
+        const latest = data.notifications[0];
+        if (
+          latest &&
+          data.notificationPrefs?.browserEnabled &&
+          typeof Notification !== 'undefined' &&
+          Notification.permission === 'granted'
+        ) {
+          new Notification(latest.title, { body: latest.body });
+        }
+      }
+      prevUnreadRef.current = data.unreadNotifications;
+    } catch {
+      // Keep UI responsive even if backend route is upgrading
+    }
+  }, []);
+
   const refreshData = useCallback(async () => {
+    refreshHelzerx();
     try {
       const health = await panelApi.getHealth().catch(() => null);
       if (health) {
@@ -346,7 +440,7 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshHelzerx]);
 
   useEffect(() => {
     refreshData();
@@ -430,6 +524,10 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
         recentPages,
         commandPaletteOpen,
         setCommandPaletteOpen,
+        helzerxData,
+        refreshHelzerx,
+        dismissedAnnouncements,
+        dismissAnnouncement,
       }}
     >
       {children}

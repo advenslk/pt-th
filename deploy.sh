@@ -67,6 +67,33 @@ if [[ -f "$ADMIN_BLADE" ]]; then
   '
 fi
 
+if [[ -d "$REPO_DIR/laravel-addon" && -d "$PANEL_DIR/app" ]]; then
+  echo "==> Installing HelzerX Laravel API & database migrations into $PANEL_DIR"
+  mkdir -p "$PANEL_DIR/app/Http/Controllers/Api/Client" "$PANEL_DIR/database/migrations" "$PANEL_DIR/routes"
+  cp -r "$REPO_DIR/laravel-addon/app/"* "$PANEL_DIR/app/"
+  cp -r "$REPO_DIR/laravel-addon/database/"* "$PANEL_DIR/database/"
+  cp -r "$REPO_DIR/laravel-addon/routes/"* "$PANEL_DIR/routes/"
+  chown -R www-data:www-data "$PANEL_DIR/app/Http/Controllers/Api/Client/HelzerxController.php" "$PANEL_DIR/routes/helzerx.php" "$PANEL_DIR/database/migrations"
+
+  API_CLIENT_ROUTES="$PANEL_DIR/routes/api-client.php"
+  if [[ -f "$API_CLIENT_ROUTES" ]]; then
+    BACKUP_DIR="$(ls -dt /root/midnightx-install-backup-* 2>/dev/null | head -1 || true)"
+    if [[ -z "$BACKUP_DIR" ]]; then
+      BACKUP_DIR="/root/midnightx-install-backup-admin"
+      mkdir -p "$BACKUP_DIR"
+    fi
+    if [[ ! -f "$BACKUP_DIR/api-client.php" ]] && ! grep -q "helzerx.php" "$API_CLIENT_ROUTES"; then
+      cp "$API_CLIENT_ROUTES" "$BACKUP_DIR/api-client.php"
+    fi
+    if ! grep -q "helzerx.php" "$API_CLIENT_ROUTES"; then
+      printf "\n// HelzerX Platform Features\nrequire __DIR__ . '/helzerx.php';\n" >> "$API_CLIENT_ROUTES"
+    fi
+  fi
+
+  cd "$PANEL_DIR"
+  php artisan migrate --force || echo "Warning: php artisan migrate returned non-zero (check database permissions)"
+fi
+
 echo "==> Refreshing Laravel caches"
 cd "$PANEL_DIR"
 chown -R www-data:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"

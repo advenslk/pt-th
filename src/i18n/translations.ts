@@ -77,6 +77,9 @@ export type TranslationKey =
   | 'nav.activity'
   | 'nav.billing'
   | 'nav.support'
+  | 'nav.rewards'
+  | 'nav.community'
+  | 'nav.updates'
   | 'nav.settings'
   | 'nav.adminPanel'
   | 'nav.logout'
@@ -118,6 +121,9 @@ const EN: Record<TranslationKey, string> = {
   'nav.activity': 'Activity',
   'nav.billing': 'Billing',
   'nav.support': 'Support',
+  'nav.rewards': 'Rewards & VIP',
+  'nav.community': 'Community',
+  'nav.updates': 'Updates & Status',
   'nav.settings': 'Account Settings',
   'nav.adminPanel': 'Admin Panel',
   'nav.logout': 'Sign Out',

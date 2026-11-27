@@ -17,6 +17,9 @@ import { ServerUsersPage } from './pages/ServerUsersPage';
 import { StartupPage } from './pages/StartupPage';
 import { SupportPage } from './pages/SupportPage';
 import { UserProfilePage } from './pages/UserProfilePage';
+import { RewardsPage } from './pages/RewardsPage';
+import { CommunityPage } from './pages/CommunityPage';
+import { UpdatesPage } from './pages/UpdatesPage';
 
 function ServerSubNav({ serverId, active }: { serverId: string; active: string }) {
   const { navigate } = usePanel();
@@ -96,6 +99,9 @@ function PanelRouter() {
           {route.page === 'account' && <UserProfilePage />}
           {route.page === 'billing' && <BillingPage />}
           {route.page === 'support' && <SupportPage />}
+          {route.page === 'rewards' && <RewardsPage />}
+          {route.page === 'community' && <CommunityPage />}
+          {route.page === 'updates' && <UpdatesPage />}
           {route.page === 'admin' && <AdminPanelPage initialSection={route.section} />}
         </motion.div>
       </AnimatePresence>

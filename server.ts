@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
+import { createHelzerxRouter } from './server/helzerxRouter';
 
 dotenv.config();
 
@@ -140,9 +141,12 @@ async function startServer() {
       hasAdminApi: Boolean(PTERO_URL && PTERO_APP_KEY),
       billingConfigured: Boolean(BILLING_API_URL),
       panelVersion: '1.15.2',
-      theme: 'MidnightX',
+      theme: 'HelzerX',
     });
   });
+
+  // HelzerX Platform Features API (must be registered before Pterodactyl client proxy)
+  app.use('/api/client/helzerx', createHelzerxRouter());
 
   // Authentic Pterodactyl Client API Proxy
   app.all('/api/client*', (req, res) => proxyToPterodactyl(req, res, false));
@@ -169,7 +173,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`MidnightX Panel Server listening on http://0.0.0.0:${PORT}`);
+    console.log(`HelzerX Panel Server listening on http://0.0.0.0:${PORT}`);
   });
 }
 

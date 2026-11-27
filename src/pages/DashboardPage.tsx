@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Activity,
   Archive,
   ArrowDown,
   ArrowUp,
   ArrowUpRight,
+  Award,
+  Bell,
   CheckCircle2,
   Eye,
   EyeOff,
   FolderOpen,
   History,
+  LifeBuoy,
+  Megaphone,
   Plus,
   RotateCcw,
   Server,
@@ -17,6 +22,7 @@ import {
   SlidersHorizontal,
   Star,
   TerminalSquare,
+  Wallet,
 } from 'lucide-react';
 import { panelApi } from '../api/client';
 import { usePanel } from '../context/PanelContext';
@@ -24,6 +30,7 @@ import type { ApiKeyEntry, SshKeyEntry, TelemetryPoint } from '../types/panel';
 import {
   computeSecurityScore,
   DEFAULT_DASHBOARD_PREFS,
+  type DashboardBgPreset,
   type DashboardWidgetId,
 } from '../utils/userPreferences';
 import { formatBytes, formatMb, formatRelativeTime, formatUptime } from '../utils/format';
@@ -38,7 +45,20 @@ const WIDGET_LABELS: Record<DashboardWidgetId, string> = {
   telemetry: 'Cluster Telemetry & Activity',
   servers: 'Server Overview Cards',
   security: 'Account Security Health',
+  announcements: 'Announcements Feed',
+  status: 'Service Status & Incidents',
+  wallet: 'Wallet & Recent Payments',
+  rewards: 'Rewards, XP & Streak',
+  notifications: 'Unread Notifications Overview',
+  quickSupport: 'Quick Support & Community Shortcuts',
 };
+
+const BG_PRESETS: Array<{ id: DashboardBgPreset; label: string }> = [
+  { id: 'default', label: 'HelzerX Default' },
+  { id: 'aurora', label: 'Aurora Violet' },
+  { id: 'cosmos', label: 'Deep Cosmos' },
+  { id: 'obsidian', label: 'Obsidian Slate' },
+];
 
 export function DashboardPage() {
   const {
@@ -54,6 +74,7 @@ export function DashboardPage() {
     setDashboardPrefs,
     favoritePages,
     recentPages,
+    helzerxData,
     notify,
   } = usePanel();
   const [history, setHistory] = useState<TelemetryPoint[]>([]);
@@ -106,6 +127,11 @@ export function DashboardPage() {
     };
   }, [servers]);
 
+  const securityAssessment = useMemo(
+    () => computeSecurityScore(user, apiKeys, sshKeys),
+    [user, apiKeys, sshKeys]
+  );
+
   // Append only real readings from Pterodactyl resources API
   useEffect(() => {
     if (!panelConnected || servers.length === 0) {
@@ -142,12 +168,11 @@ export function DashboardPage() {
   }
 
   const primaryServer = servers[0];
-  const displayName = user ? `${user.firstName} ${user.lastName}`.trim() || user.username : 'User';
+  const displayName =
+    helzerxData?.profile?.displayName ||
+    (user ? `${user.firstName} ${user.lastName}`.trim() || user.username : 'User');
+  const avatarSrc = helzerxData?.profile?.avatarUrl || defaultAvatar;
   const greetingText = dashboardPrefs.customGreeting.trim() || t('dash.welcome');
-  const securityAssessment = useMemo(
-    () => computeSecurityScore(user, apiKeys, sshKeys),
-    [user, apiKeys, sshKeys]
-  );
 
   const moveWidget = (id: DashboardWidgetId, dir: -1 | 1) => {
     setDashboardPrefs((prev) => {
@@ -244,7 +269,7 @@ export function DashboardPage() {
                   {t('dash.telemetry')}
                 </h2>
                 <p className="text-xs text-[#777777] dark:text-zinc-400 mt-0.5">
-                  Live CPU & memory readings polled from Pterodactyl Wings
+                  Live CPU &amp; memory readings polled from Pterodactyl Wings
                 </p>
               </div>
               <button
@@ -313,7 +338,7 @@ export function DashboardPage() {
               </div>
               <div>
                 <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
-                  Account Health & Security Score
+                  Account Health &amp; Security Score
                 </h2>
                 <p className="text-xs text-[#777777] dark:text-zinc-400">
                   Live Pterodactyl posture across 2FA, SSH keys, and API tokens
@@ -351,6 +376,226 @@ export function DashboardPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </section>
+      );
+    }
+
+    if (id === 'announcements') {
+      const anns = helzerxData?.activeAnnouncements || [];
+      return (
+        <section key="announcements" className="mx-card-3d p-5 sm:p-6 rounded-2xl space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="mx-heading-3d text-base font-bold flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-[#8B5CF6]" />
+              Announcements Feed
+            </h2>
+            <button
+              type="button"
+              onClick={() => navigate({ page: 'updates' })}
+              className="text-xs text-[#8B5CF6] hover:underline cursor-pointer"
+            >
+              Open Updates Hub
+            </button>
+          </div>
+          {anns.length === 0 ? (
+            <div className="text-xs text-[#777777]">No active platform announcements.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {anns.slice(0, 4).map((a) => (
+                <div key={a.id} className="mx-well-3d p-3.5 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between text-[11px] text-[#777777]">
+                    <span className="font-semibold text-[#8B5CF6]">{a.category}</span>
+                    <span>{formatRelativeTime(a.createdAt)}</span>
+                  </div>
+                  <div className="text-xs font-bold text-[#171717] dark:text-white">{a.title}</div>
+                  <p className="text-[11px] text-[#525252] dark:text-zinc-300 line-clamp-2">{a.body}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      );
+    }
+
+    if (id === 'status') {
+      const incidents = helzerxData?.incidents || [];
+      return (
+        <section key="status" className="mx-card-3d p-5 sm:p-6 rounded-2xl space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="mx-heading-3d text-base font-bold flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-500" />
+              Service Status
+            </h2>
+            <button
+              type="button"
+              onClick={() => navigate({ page: 'updates' })}
+              className="text-xs text-[#8B5CF6] hover:underline cursor-pointer"
+            >
+              Full status page
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {incidents.slice(0, 4).map((inc) => (
+              <div key={inc.id} className="mx-well-3d p-3.5 rounded-xl flex items-center justify-between gap-3 text-xs">
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">{inc.component}</div>
+                  <div className="text-[11px] text-[#777777] truncate">{inc.title}</div>
+                </div>
+                <span
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase shrink-0 ${
+                    inc.status === 'operational'
+                      ? 'bg-emerald-500/15 text-emerald-500'
+                      : inc.status === 'outage'
+                        ? 'bg-rose-500/15 text-rose-500'
+                        : 'bg-amber-500/15 text-amber-500'
+                  }`}
+                >
+                  {inc.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+    }
+
+    if (id === 'wallet') {
+      const txs = helzerxData?.recentTransactions || [];
+      return (
+        <section key="wallet" className="mx-card-3d p-5 sm:p-6 rounded-2xl space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3">
+              <Wallet className="w-5 h-5 text-[#8B5CF6]" />
+              <div>
+                <h2 className="mx-heading-3d text-base font-bold">Wallet &amp; Recent Payments</h2>
+                <div className="text-xs text-[#777777]">
+                  Available balance:{' '}
+                  <strong className="font-mono text-[#171717] dark:text-white">
+                    ${(helzerxData?.walletBalance || 0).toFixed(2)}
+                  </strong>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate({ page: 'billing' })}
+              className="mx-btn-3d-primary px-3 py-1.5 rounded-xl text-xs cursor-pointer"
+            >
+              Manage Billing
+            </button>
+          </div>
+          {txs.length > 0 && (
+            <div className="divide-y divide-black/[0.05] dark:divide-white/[0.05] text-xs">
+              {txs.slice(0, 4).map((tx) => (
+                <div key={tx.id} className="py-2 flex items-center justify-between gap-2">
+                  <span className="truncate">{tx.note}</span>
+                  <span className="font-mono font-semibold shrink-0">
+                    {tx.type === 'debit' ? '-' : '+'}${tx.amount.toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      );
+    }
+
+    if (id === 'rewards') {
+      const loy = helzerxData?.loyalty;
+      return (
+        <section key="rewards" className="mx-card-3d p-5 sm:p-6 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="mx-well-3d w-10 h-10 rounded-xl flex items-center justify-center">
+              <Award className="w-5 h-5 text-[#06B6D4]" />
+            </div>
+            <div>
+              <h2 className="mx-heading-3d text-base font-bold">
+                Rewards &amp; VIP Status ({loy?.tier || 'Standard'})
+              </h2>
+              <p className="text-xs text-[#777777] dark:text-zinc-400 font-mono">
+                Level {loy?.level || 1} · {loy?.xp || 0} XP · {loy?.points || 0} Points · {loy?.streakDays || 0}-Day Streak
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate({ page: 'rewards' })}
+            className="mx-btn-3d-primary px-3.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
+          >
+            Claim Daily Reward
+          </button>
+        </section>
+      );
+    }
+
+    if (id === 'notifications') {
+      const ntfs = helzerxData?.notifications || [];
+      return (
+        <section key="notifications" className="mx-card-3d p-5 sm:p-6 rounded-2xl space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="mx-heading-3d text-base font-bold flex items-center gap-2">
+              <Bell className="w-4 h-4 text-[#06B6D4]" />
+              Notifications ({helzerxData?.unreadNotifications || 0} unread)
+            </h2>
+            <button
+              type="button"
+              onClick={() => navigate({ page: 'updates' })}
+              className="text-xs text-[#8B5CF6] hover:underline cursor-pointer"
+            >
+              View All
+            </button>
+          </div>
+          {ntfs.length === 0 ? (
+            <div className="text-xs text-[#777777]">You are all caught up.</div>
+          ) : (
+            <div className="space-y-2">
+              {ntfs.slice(0, 4).map((n) => (
+                <div key={n.id} className="mx-well-3d p-3 rounded-xl flex items-center justify-between gap-2 text-xs">
+                  <div className="min-w-0">
+                    <div className="font-semibold truncate">{n.title}</div>
+                    <div className="text-[11px] text-[#777777] truncate">{n.body}</div>
+                  </div>
+                  <span className="font-mono text-[10px] text-[#777777] shrink-0">
+                    {formatRelativeTime(n.createdAt)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      );
+    }
+
+    if (id === 'quickSupport') {
+      return (
+        <section key="quickSupport" className="mx-card-3d p-5 sm:p-6 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="mx-well-3d w-10 h-10 rounded-xl flex items-center justify-center">
+              <LifeBuoy className="w-5 h-5 text-[#06B6D4]" />
+            </div>
+            <div>
+              <h2 className="mx-heading-3d text-base font-bold">Need Assistance or Want to Connect?</h2>
+              <p className="text-xs text-[#777777] dark:text-zinc-400">
+                Open a ticket with engineering, browse Knowledge Base guides, or join Community Discussions
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => navigate({ page: 'support' })}
+              className="mx-btn-3d-primary px-3.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
+            >
+              Open Support Ticket
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate({ page: 'community' })}
+              className="mx-btn-3d px-3.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
+            >
+              Community Forum
+            </button>
           </div>
         </section>
       );
@@ -475,7 +720,7 @@ export function DashboardPage() {
         <div className="flex items-center gap-4 min-w-0">
           <div className="w-12 h-12 rounded-2xl overflow-hidden ring-2 ring-[#171717] dark:ring-white/20 bg-[#171717] shrink-0 shadow-[0_6px_14px_rgba(0,0,0,0.22)]">
             <img
-              src={defaultAvatar}
+              src={avatarSrc}
               alt={displayName}
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
@@ -558,10 +803,10 @@ export function DashboardPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
             <div>
               <h2 className="mx-heading-3d text-sm font-bold text-[#171717] dark:text-white">
-                Dashboard Layout & Personalization
+                Dashboard Layout &amp; Personalization
               </h2>
               <p className="text-xs text-[#777777] dark:text-zinc-400">
-                Customize widget order, visibility, quick shortcuts bar, and personal greeting
+                Customize widget order, visibility, quick shortcuts bar, background gradient, and personal greeting
               </p>
             </div>
             <button
@@ -578,19 +823,42 @@ export function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="space-y-2.5">
-              <label className="block text-xs font-medium text-[#525252] dark:text-zinc-300">
-                Custom Greeting Prefix
-              </label>
-              <input
-                type="text"
-                value={dashboardPrefs.customGreeting}
-                onChange={(e) =>
-                  setDashboardPrefs((prev) => ({ ...prev, customGreeting: e.target.value }))
-                }
-                placeholder={`Default (${t('dash.welcome')})`}
-                className="mx-input-3d w-full px-3 py-2 text-xs rounded-xl"
-              />
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-[#525252] dark:text-zinc-300 mb-1">
+                  Custom Greeting Prefix
+                </label>
+                <input
+                  type="text"
+                  value={dashboardPrefs.customGreeting}
+                  onChange={(e) =>
+                    setDashboardPrefs((prev) => ({ ...prev, customGreeting: e.target.value }))
+                  }
+                  placeholder={`Default (${t('dash.welcome')})`}
+                  className="mx-input-3d w-full px-3 py-2 text-xs rounded-xl"
+                />
+              </div>
+
+              <div>
+                <div className="text-xs font-medium text-[#525252] dark:text-zinc-300 mb-1.5">
+                  Dashboard Background Preset
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {BG_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => setDashboardPrefs((prev) => ({ ...prev, bgPreset: preset.id }))}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer ${
+                        dashboardPrefs.bgPreset === preset.id ? 'mx-btn-3d-primary' : 'mx-btn-3d'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <label className="flex items-center gap-2.5 pt-1 text-xs text-[#171717] dark:text-zinc-200 cursor-pointer">
                 <input
                   type="checkbox"
@@ -608,7 +876,7 @@ export function DashboardPage() {
               <div className="text-xs font-medium text-[#525252] dark:text-zinc-300">
                 Widget Order &amp; Visibility
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
                 {dashboardPrefs.widgetOrder.map((wid, idx) => {
                   const isHidden = dashboardPrefs.hiddenWidgets.includes(wid);
                   return (
