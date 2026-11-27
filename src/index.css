@@ -51,10 +51,74 @@
    MIDNIGHTX 3D TACTILE HARDWARE DESIGN SYSTEM
    ================================================================ */
 
+@keyframes mxRgbBgShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes mxRgbOrbFloatA {
+  0%, 100% {
+    transform: translate3d(0%, 0%, 0) scale(1);
+    opacity: 0.22;
+  }
+  33% {
+    transform: translate3d(14%, 8%, 0) scale(1.12);
+    opacity: 0.3;
+  }
+  66% {
+    transform: translate3d(-8%, 12%, 0) scale(0.95);
+    opacity: 0.18;
+  }
+}
+
+@keyframes mxRgbOrbFloatB {
+  0%, 100% {
+    transform: translate3d(0%, 0%, 0) scale(1);
+    opacity: 0.16;
+  }
+  40% {
+    transform: translate3d(-14%, -10%, 0) scale(1.15);
+    opacity: 0.26;
+  }
+  75% {
+    transform: translate3d(10%, -6%, 0) scale(0.92);
+    opacity: 0.14;
+  }
+}
+
+.mx-rgb-bg {
+  position: relative;
+  background: linear-gradient(125deg, #E2E2E7 0%, #DCDCE5 28%, #E6E2EE 55%, #D9DEE5 80%, #E4E4E8 100%);
+  background-size: 300% 300%;
+  animation: mxRgbBgShift 26s ease-in-out infinite;
+}
+
+.dark .mx-rgb-bg {
+  background: linear-gradient(125deg, #09090D 0%, #191922 22%, #23143A 46%, #131824 68%, #27153E 86%, #0D0D12 100%);
+  background-size: 320% 320%;
+  animation: mxRgbBgShift 24s ease-in-out infinite;
+}
+
+.mx-rgb-orb-a {
+  animation: mxRgbOrbFloatA 26s ease-in-out infinite;
+}
+
+.mx-rgb-orb-b {
+  animation: mxRgbOrbFloatB 32s ease-in-out infinite;
+}
+
 /* Outer Desktop Window & Floating Rail Housing */
 .mx-shell-3d {
-  background: linear-gradient(180deg, #E2E2E2 0%, #D7D7D7 100%);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: linear-gradient(180deg, rgba(226, 226, 232, 0.84) 0%, rgba(214, 214, 222, 0.82) 100%);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.72);
   box-shadow:
     inset 0 1.5px 0 rgba(255, 255, 255, 0.85),
     inset 0 -2px 4px rgba(0, 0, 0, 0.06),
@@ -63,18 +127,19 @@
 }
 
 .dark .mx-shell-3d {
-  background: linear-gradient(180deg, #191920 0%, #121217 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(155deg, rgba(26, 26, 36, 0.76) 0%, rgba(16, 15, 24, 0.82) 55%, rgba(24, 18, 36, 0.78) 100%);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
     inset 0 -2px 6px rgba(0, 0, 0, 0.5),
-    0 28px 64px -12px rgba(0, 0, 0, 0.65),
-    0 6px 18px -2px rgba(0, 0, 0, 0.4);
+    0 28px 64px -12px rgba(0, 0, 0, 0.68),
+    0 6px 18px -2px rgba(0, 0, 0, 0.42);
 }
 
 /* Inner Main Content Viewport */
 .mx-viewport-3d {
-  background: linear-gradient(180deg, #F5F5F5 0%, #EDEDED 100%);
+  background: linear-gradient(180deg, rgba(247, 247, 250, 0.82) 0%, rgba(236, 236, 242, 0.78) 100%);
   border: 1px solid rgba(0, 0, 0, 0.07);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
@@ -82,11 +147,11 @@
 }
 
 .dark .mx-viewport-3d {
-  background: linear-gradient(180deg, #1C1C23 0%, #17171D 100%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(160deg, rgba(25, 25, 34, 0.68) 0%, rgba(19, 18, 28, 0.74) 52%, rgba(26, 19, 38, 0.7) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 6px 20px rgba(0, 0, 0, 0.4);
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 6px 24px rgba(0, 0, 0, 0.42);
 }
 
 /* Tactile 3D Cards */
@@ -102,8 +167,9 @@
 }
 
 .dark .mx-card-3d {
-  background: linear-gradient(180deg, #22222B 0%, #1A1A21 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(165deg, rgba(35, 34, 48, 0.82) 0%, rgba(23, 21, 34, 0.88) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.085);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.09),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4),

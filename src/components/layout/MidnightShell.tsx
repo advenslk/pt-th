@@ -493,7 +493,20 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen w-full bg-[#E8E8E8] dark:bg-[#101014] text-[#171717] dark:text-zinc-100 p-2 sm:p-3.5 lg:p-4 flex overflow-x-hidden transition-colors duration-200">
+    <div className="mx-rgb-bg min-h-screen w-full text-[#171717] dark:text-zinc-100 p-2 sm:p-3.5 lg:p-4 flex overflow-x-hidden transition-colors duration-200">
+      {/* Subtle Slow RGB Ambient Glow Layer */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0" aria-hidden="true">
+        <div
+          className="mx-rgb-orb-a absolute -top-28 -left-24 w-[34rem] h-[34rem] rounded-full blur-[120px] bg-violet-500/20 dark:bg-[#7C3AED]/30"
+        />
+        <div
+          className="mx-rgb-orb-b absolute -bottom-28 -right-24 w-[36rem] h-[36rem] rounded-full blur-[130px] bg-cyan-500/15 dark:bg-[#06B6D4]/22"
+        />
+        <div
+          className="mx-rgb-orb-a absolute top-1/3 left-1/2 -translate-x-1/2 w-[30rem] h-[22rem] rounded-full blur-[140px] bg-slate-400/15 dark:bg-[#5B21B6]/22"
+          style={{ animationDelay: '-11s' }}
+        />
+      </div>
 
       {/* MOBILE DRAWER OVERLAY */}
       <AnimatePresence>
@@ -521,7 +534,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
 
       {/* MAIN 3D DESKTOP APPLICATION WINDOW */}
-      <div className="flex-1 min-w-0 flex rounded-[26px] mx-shell-3d min-h-[calc(100vh-1rem)] sm:min-h-[calc(100vh-1.75rem)] lg:min-h-[calc(100vh-2rem)] overflow-hidden">
+      <div className="relative z-10 flex-1 min-w-0 flex rounded-[26px] mx-shell-3d min-h-[calc(100vh-1rem)] sm:min-h-[calc(100vh-1.75rem)] lg:min-h-[calc(100vh-2rem)] overflow-hidden">
         <aside
           aria-hidden={sidebarCollapsed}
           className={`hidden md:flex flex-col shrink-0 overflow-hidden transition-[width,opacity] duration-200 ease-out ${
