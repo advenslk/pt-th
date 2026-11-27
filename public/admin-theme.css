@@ -127,7 +127,7 @@ html.mx-admin-dark body {
 
 .wrapper {
   position: relative;
-  z-index: 1;
+  z-index: auto;
   background: transparent !important;
   overflow-x: hidden !important;
 }
@@ -167,7 +167,9 @@ html.mx-admin-dark .skin-blue .main-header .navbar {
   box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.55) !important;
 }
 
-.skin-blue .main-header .logo {
+.skin-blue .main-header .logo,
+.skin-blue .main-header .logo:focus,
+.skin-blue .main-header .logo:visited {
   background: linear-gradient(180deg, rgba(22, 22, 29, 0.96) 0%, rgba(13, 13, 18, 0.98) 100%) !important;
   color: #FFFFFF !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
@@ -176,16 +178,21 @@ html.mx-admin-dark .skin-blue .main-header .navbar {
   font-weight: 700 !important;
   letter-spacing: -0.02em;
   display: flex !important;
-  align-items: center;
-  justify-content: center;
+  align-items: center !important;
+  justify-content: center !important;
   gap: 8px;
 }
 
 .skin-blue .main-header .logo:hover {
   background: linear-gradient(180deg, rgba(28, 28, 37, 0.98) 0%, rgba(17, 17, 24, 1) 100%) !important;
+  color: #FFFFFF !important;
 }
 
+.skin-blue .main-header .logo span,
+.skin-blue .main-header .logo b,
 .skin-blue .main-header .logo .logo-lg {
+  color: #FFFFFF !important;
+  opacity: 1 !important;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
@@ -202,21 +209,45 @@ html.mx-admin-dark .skin-blue .main-header .navbar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #FFFFFF;
+  color: #FFFFFF !important;
   flex-shrink: 0;
 }
 
 /* 3D Hamburger Sidebar Toggle Button */
 .skin-blue .main-header .navbar .sidebar-toggle {
-  margin: 9px 0 9px 12px !important;
-  padding: 6px 10px !important;
-  line-height: 18px !important;
+  margin: 8px 0 8px 12px !important;
+  padding: 0 !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px !important;
+  flex-shrink: 0 !important;
   background: var(--mxa-btn-neutral-bg) !important;
   border: 1px solid var(--mxa-input-border) !important;
   color: var(--mxa-text) !important;
   border-radius: 10px !important;
   box-shadow: var(--mxa-btn-neutral-shadow) !important;
   transition: transform 110ms ease, box-shadow 110ms ease !important;
+}
+
+.skin-blue .main-header .navbar .sidebar-toggle::before {
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+.skin-blue .main-header .navbar .sidebar-toggle .icon-bar {
+  display: block !important;
+  width: 15px !important;
+  height: 2px !important;
+  border-radius: 99px !important;
+  background: currentColor !important;
+  margin: 0 !important;
 }
 
 .skin-blue .main-header .navbar .sidebar-toggle:hover {
@@ -227,6 +258,7 @@ html.mx-admin-dark .skin-blue .main-header .navbar {
 .skin-blue .main-header .navbar .navbar-custom-menu {
   display: flex;
   align-items: center;
+  min-height: 50px;
 }
 
 .skin-blue .main-header .navbar .navbar-custom-menu > .nav {
@@ -263,10 +295,13 @@ html.mx-admin-dark .skin-blue .main-header .navbar {
 
 .mx-admin-theme-btn {
   display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
+  align-items: center !important;
+  justify-content: center !important;
   gap: 6px;
-  height: 32px;
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  line-height: 1 !important;
   padding: 0 11px !important;
   border-radius: 10px !important;
   font-size: 12px !important;
@@ -277,6 +312,7 @@ html.mx-admin-dark .skin-blue .main-header .navbar {
   box-shadow: var(--mxa-btn-neutral-shadow) !important;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: transform 110ms ease, border-color 140ms ease;
 }
 
@@ -349,14 +385,15 @@ html.mx-admin-dark .skin-blue .main-header .navbar {
   color: #A78BFA !important;
 }
 
-/* Mobile Sidebar Backdrop */
+/* Mobile Sidebar Backdrop (inside .wrapper, below .main-sidebar) */
 .mx-admin-backdrop {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 800;
-  background: rgba(0, 0, 0, 0.55);
+  z-index: 850;
+  background: rgba(5, 5, 10, 0.56);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 /* ================================================================
@@ -728,6 +765,11 @@ label {
   border: none !important;
 }
 
+.mx-table-scroll > .table,
+.table-responsive > .table {
+  margin-bottom: 0 !important;
+}
+
 .table > thead > tr > th {
   border-bottom: 1px solid var(--mxa-border) !important;
   color: var(--mxa-text-muted) !important;
@@ -856,51 +898,102 @@ html:not(.mx-admin-dark) code {
   }
 
   .skin-blue .main-header .navbar {
+    height: 50px !important;
     min-height: 50px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 0 8px !important;
+    padding: 0 10px !important;
+  }
+
+  /* Strip Bootstrap clearfix ::before/::after inside flex containers */
+  .skin-blue .main-header .navbar::before,
+  .skin-blue .main-header .navbar::after,
+  .box-header::before,
+  .box-header::after,
+  .box-footer::before,
+  .box-footer::after {
+    display: none !important;
+    content: none !important;
   }
 
   .skin-blue .main-header .navbar .sidebar-toggle {
+    float: none !important;
     margin: 0 !important;
-    padding: 7px 10px !important;
+    padding: 0 !important;
+    width: 36px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
   }
 
   .skin-blue .main-header .navbar .navbar-custom-menu {
+    float: none !important;
     margin-left: auto;
+    min-height: 34px !important;
   }
 
   .skin-blue .main-header .navbar .navbar-custom-menu > .nav {
     margin: 0 !important;
-    gap: 2px;
+    gap: 4px;
+  }
+
+  .skin-blue .main-header .navbar .nav > li > a {
+    padding: 6px 8px !important;
+    height: 34px !important;
   }
 
   .mx-admin-theme-btn {
-    height: 30px;
-    padding: 0 8px !important;
-    font-size: 11px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+    min-width: 34px !important;
+    padding: 0 9px !important;
+    font-size: 13px !important;
   }
 
   .mx-admin-theme-label {
     display: none;
   }
 
-  /* Fix AdminLTE sidebar slide-in & backdrop on mobile */
+  /* Completely slide closed sidebar off-screen (-100% covers any width cleanly) */
   .main-sidebar,
   .left-side {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
     padding-top: 98px !important;
-    z-index: 900 !important;
+    z-index: 950 !important;
     width: 260px !important;
+    overflow-y: auto !important;
+    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), visibility 240ms !important;
+  }
+
+  body:not(.sidebar-open) .main-sidebar,
+  body:not(.sidebar-open) .left-side {
+    transform: translate3d(-100%, 0, 0) !important;
+    -webkit-transform: translate3d(-100%, 0, 0) !important;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  body.sidebar-open .main-sidebar,
+  body.sidebar-open .left-side {
+    transform: translate3d(0, 0, 0) !important;
+    -webkit-transform: translate3d(0, 0, 0) !important;
+    visibility: visible;
+    pointer-events: auto;
   }
 
   body.sidebar-open .mx-admin-backdrop {
     display: block;
   }
 
-  body.sidebar-open .content-wrapper,
-  body.sidebar-open .main-footer {
+  .content-wrapper,
+  .right-side,
+  .main-footer {
+    margin-left: 0 !important;
     transform: none !important;
   }
 
@@ -944,14 +1037,19 @@ html:not(.mx-admin-dark) code {
     margin-bottom: 14px !important;
   }
 
-  /* Prevent AdminLTE .box-tools absolute overlap with .box-title on mobile */
+  /* Keep .box-title flush left and .box-tools neatly below/beside on mobile */
   .box-header {
     display: flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
-    justify-content: space-between !important;
+    justify-content: flex-start !important;
     gap: 10px !important;
     padding: 13px 14px !important;
+  }
+
+  .box-header > .box-title {
+    margin-right: auto !important;
+    text-align: left !important;
   }
 
   .box-header > .box-tools {
@@ -971,6 +1069,10 @@ html:not(.mx-admin-dark) code {
 
   .box-body {
     padding: 14px !important;
+  }
+
+  .box-body.no-padding {
+    padding: 0 !important;
   }
 
   .box-footer {
