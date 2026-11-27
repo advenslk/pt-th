@@ -65,6 +65,9 @@ export interface PterodactylServer {
   ownerId: number;
   isServerOwner: boolean;
   userPermissions: string[];
+  isSuspended?: boolean;
+  isInstalling?: boolean;
+  isTransferring?: boolean;
 }
 
 export interface ScheduleCron {
@@ -377,8 +380,9 @@ export interface SupportTicket {
 export interface ConsoleLine {
   id: string;
   timestamp: string;
-  level: 'info' | 'warn' | 'error' | 'daemon' | 'cmd';
+  level: 'info' | 'warn' | 'error' | 'daemon' | 'cmd' | 'install';
   text: string;
+  rawText?: string;
 }
 
 export interface TelemetryPoint {

@@ -33,6 +33,11 @@ function getXsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function getMetaCsrfToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || null;
+}
+
 export class PanelApiError extends Error {
   status: number;
   code?: string;
@@ -43,18 +48,22 @@ export class PanelApiError extends Error {
   }
 }
 
-async function rawRequest(url: string, options: RequestInit = {}): Promise<Response> {
+async function rawRequest(url: string, options: RequestInit = {}, retriedCsrf = false): Promise<Response> {
   const xsrf = getXsrfToken();
+  const metaCsrf = getMetaCsrfToken();
   const headers: Record<string, string> = {
     Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
     ...(options.headers as Record<string, string> | undefined),
   };
 
   if (xsrf) {
     headers['X-XSRF-TOKEN'] = xsrf;
+  } else if (metaCsrf) {
+    headers['X-CSRF-TOKEN'] = metaCsrf;
   }
 
-  if (options.body && typeof options.body === 'string' && !headers['Content-Type']) {
+  if (options.body !== undefined && typeof options.body === 'string' && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -63,6 +72,11 @@ async function rawRequest(url: string, options: RequestInit = {}): Promise<Respo
     ...options,
     headers,
   });
+
+  if (res.status === 419 && !retriedCsrf) {
+    await fetch('/sanctum/csrf-cookie', { credentials: 'include' }).catch(() => {});
+    return rawRequest(url, options, true);
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -158,6 +172,9 @@ function normalizeServer(item: any, resources?: any): PterodactylServer {
     ownerId: attr.server_owner ? 1 : 0,
     isServerOwner: Boolean(attr.server_owner),
     userPermissions: Array.isArray(attr.user_permissions) ? attr.user_permissions : [],
+    isSuspended: Boolean(attr.is_suspended),
+    isInstalling: Boolean(attr.is_installing),
+    isTransferring: Boolean(attr.is_transferring),
   };
 }
 
@@ -442,8 +459,9 @@ export const panelApi = {
   uploadFilesToSignedUrl: async (signedUrl: string, directory: string, files: FileList) => {
     const formData = new FormData();
     Array.from(files).forEach((f) => formData.append('files', f));
-    const url = `${signedUrl}&directory=${encodeURIComponent(directory)}`;
-    const res = await fetch(url, { method: 'POST', body: formData });
+    const urlObj = new URL(signedUrl, window.location.origin);
+    urlObj.searchParams.set('directory', directory);
+    const res = await fetch(urlObj.toString(), { method: 'POST', body: formData });
     if (!res.ok) throw new Error(`Upload failed (${res.status})`);
   },
 
