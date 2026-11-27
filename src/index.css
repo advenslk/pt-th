@@ -1,0 +1,404 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --mx-bg-primary: #E8E8E8;
+    --mx-bg-secondary: #DCDCDC;
+    --mx-surface: #EFEFEF;
+    --mx-surface-elevated: #F7F7F7;
+    --mx-sidebar-bg: #171717;
+    --mx-sidebar-secondary: #242424;
+    --mx-accent-primary: #8B5CF6;
+    --mx-accent-secondary: #06B6D4;
+    --mx-text-primary: #171717;
+    --mx-text-secondary: #777777;
+  }
+
+  .dark {
+    --mx-bg-primary: #101014;
+    --mx-bg-secondary: #15151B;
+    --mx-surface: #19191F;
+    --mx-surface-elevated: #202028;
+    --mx-sidebar-bg: #080809;
+    --mx-sidebar-secondary: #19191F;
+    --mx-accent-primary: #8B5CF6;
+    --mx-accent-secondary: #06B6D4;
+    --mx-text-primary: #F3F4F6;
+    --mx-text-secondary: #9CA3AF;
+  }
+
+  html {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background-color: var(--mx-bg-primary);
+    color: var(--mx-text-primary);
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  code, pre, kbd, samp, .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ================================================================
+   MIDNIGHTX 3D TACTILE HARDWARE DESIGN SYSTEM
+   ================================================================ */
+
+/* Outer Desktop Window & Floating Rail Housing */
+.mx-shell-3d {
+  background: linear-gradient(180deg, #E2E2E2 0%, #D7D7D7 100%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.06),
+    0 24px 54px -12px rgba(0, 0, 0, 0.16),
+    0 4px 14px -2px rgba(0, 0, 0, 0.08);
+}
+
+.dark .mx-shell-3d {
+  background: linear-gradient(180deg, #191920 0%, #121217 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.5),
+    0 28px 64px -12px rgba(0, 0, 0, 0.65),
+    0 6px 18px -2px rgba(0, 0, 0, 0.4);
+}
+
+/* Inner Main Content Viewport */
+.mx-viewport-3d {
+  background: linear-gradient(180deg, #F5F5F5 0%, #EDEDED 100%);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.dark .mx-viewport-3d {
+  background: linear-gradient(180deg, #1C1C23 0%, #17171D 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Tactile 3D Cards */
+.mx-card-3d {
+  background: linear-gradient(180deg, #FAFAFA 0%, #F1F1F1 100%);
+  border: 1px solid rgba(23, 23, 23, 0.09);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.03),
+    0 8px 20px -6px rgba(0, 0, 0, 0.09),
+    0 2px 5px -1px rgba(0, 0, 0, 0.05);
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1), border-color 160ms ease;
+}
+
+.dark .mx-card-3d {
+  background: linear-gradient(180deg, #22222B 0%, #1A1A21 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+    0 12px 28px -8px rgba(0, 0, 0, 0.55),
+    0 3px 8px -2px rgba(0, 0, 0, 0.35);
+}
+
+.mx-card-3d-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.98),
+    0 14px 28px -8px rgba(0, 0, 0, 0.14),
+    0 4px 10px -2px rgba(139, 92, 246, 0.14);
+}
+
+.dark .mx-card-3d-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 18px 34px -8px rgba(0, 0, 0, 0.72),
+    0 4px 14px -2px rgba(139, 92, 246, 0.22);
+}
+
+/* Tactile 3D Buttons (Neutral Keycap) */
+.mx-btn-3d {
+  background: linear-gradient(180deg, #FFFFFF 0%, #EAEAEA 100%);
+  border: 1px solid rgba(23, 23, 23, 0.14);
+  color: #171717;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.08),
+    0 3px 6px -1px rgba(0, 0, 0, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: transform 110ms ease, box-shadow 110ms ease, filter 110ms ease;
+}
+
+.mx-btn-3d:hover:not(:disabled) {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F0F0F0 100%);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 1),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.09),
+    0 6px 12px -2px rgba(0, 0, 0, 0.13);
+}
+
+.mx-btn-3d:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.12),
+    0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.dark .mx-btn-3d {
+  background: linear-gradient(180deg, #2B2B36 0%, #202028 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #F3F4F6;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.45),
+    0 4px 10px -2px rgba(0, 0, 0, 0.45);
+}
+
+.dark .mx-btn-3d:hover:not(:disabled) {
+  background: linear-gradient(180deg, #32323F 0%, #25252E 100%);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.5),
+    0 7px 14px -2px rgba(0, 0, 0, 0.55);
+}
+
+.dark .mx-btn-3d:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.55),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* Primary 3D Violet / Onyx Action Button */
+.mx-btn-3d-primary {
+  background: linear-gradient(180deg, #9D74FA 0%, #7C3AED 100%);
+  border: 1px solid #6D28D9;
+  color: #FFFFFF;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -2.5px 0 rgba(46, 16, 101, 0.45),
+    0 5px 14px -2px rgba(139, 92, 246, 0.42),
+    0 2px 4px rgba(0, 0, 0, 0.16);
+  transition: transform 110ms ease, box-shadow 110ms ease, filter 110ms ease;
+}
+
+.mx-btn-3d-primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2.5px 0 rgba(46, 16, 101, 0.5),
+    0 8px 20px -3px rgba(139, 92, 246, 0.55);
+}
+
+.mx-btn-3d-primary:active:not(:disabled) {
+  transform: translateY(1.5px);
+  box-shadow:
+    inset 0 2px 5px rgba(46, 16, 101, 0.55),
+    0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* Tactile 3D Dark Obsidian Button */
+.mx-btn-3d-dark {
+  background: linear-gradient(180deg, #2B2B30 0%, #17171A 100%);
+  border: 1px solid #0E0E10;
+  color: #FFFFFF;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.65),
+    0 5px 12px -2px rgba(0, 0, 0, 0.32);
+  transition: transform 110ms ease, box-shadow 110ms ease;
+}
+
+.mx-btn-3d-dark:hover:not(:disabled) {
+  background: linear-gradient(180deg, #35353B 0%, #1D1D22 100%);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.7),
+    0 8px 16px -2px rgba(0, 0, 0, 0.38);
+}
+
+.mx-btn-3d-dark:active:not(:disabled) {
+  transform: translateY(1.5px);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.7);
+}
+
+/* Tactile 3D Emerald Start Button */
+.mx-btn-3d-success {
+  background: linear-gradient(180deg, #10B981 0%, #059669 100%);
+  border: 1px solid #047857;
+  color: #FFFFFF;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -2px 0 rgba(6, 78, 59, 0.45),
+    0 4px 12px -2px rgba(16, 185, 129, 0.38);
+  transition: transform 110ms ease, box-shadow 110ms ease;
+}
+
+.mx-btn-3d-success:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.mx-btn-3d-success:active:not(:disabled) {
+  transform: translateY(1.5px);
+  box-shadow: inset 0 2px 4px rgba(6, 78, 59, 0.55);
+}
+
+/* Tactile 3D Crimson Kill / Stop Button */
+.mx-btn-3d-danger {
+  background: linear-gradient(180deg, #F43F5E 0%, #E11D48 100%);
+  border: 1px solid #BE123C;
+  color: #FFFFFF;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -2px 0 rgba(136, 19, 55, 0.45),
+    0 4px 12px -2px rgba(244, 63, 94, 0.35);
+  transition: transform 110ms ease, box-shadow 110ms ease;
+}
+
+.mx-btn-3d-danger:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.mx-btn-3d-danger:active:not(:disabled) {
+  transform: translateY(1.5px);
+  box-shadow: inset 0 2px 4px rgba(136, 19, 55, 0.55);
+}
+
+/* Recessed 3D Input Well & Segmented Track */
+.mx-well-3d {
+  background: rgba(0, 0, 0, 0.045);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.07),
+    0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.dark .mx-well-3d {
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.mx-input-3d {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.11);
+  box-shadow:
+    inset 0 1.5px 3px rgba(0, 0, 0, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.mx-input-3d:focus {
+  outline: none;
+  border-color: #8B5CF6;
+  box-shadow:
+    inset 0 1.5px 3px rgba(0, 0, 0, 0.05),
+    0 0 0 3px rgba(139, 92, 246, 0.16);
+}
+
+.dark .mx-input-3d {
+  background: #121217;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #F3F4F6;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.dark .mx-input-3d:focus {
+  outline: none;
+  border-color: #8B5CF6;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.55),
+    0 0 0 3px rgba(139, 92, 246, 0.25);
+}
+
+/* 3D Frosted Active Nav Pill (Matches reference Dashboard highlight) */
+.mx-nav-active {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(235, 235, 238, 0.65) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 1),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.05),
+    0 6px 16px -4px rgba(0, 0, 0, 0.14),
+    0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.dark .mx-nav-active {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.4),
+    0 8px 18px -4px rgba(0, 0, 0, 0.5);
+}
+
+/* 3D Dark Rail Track & Keycap Active State */
+.mx-rail-track {
+  background: linear-gradient(180deg, #1E1E22 0%, #121215 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 8px 18px rgba(0, 0, 0, 0.25);
+}
+
+.dark .mx-rail-track {
+  background: linear-gradient(180deg, #0D0D10 0%, #060608 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mx-rail-active {
+  background: linear-gradient(165deg, #43434D 0%, #222228 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.55),
+    0 4px 12px rgba(0, 0, 0, 0.65);
+}
+
+/* Thin custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(119, 119, 119, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(119, 119, 119, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
