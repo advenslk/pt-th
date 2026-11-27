@@ -25,6 +25,7 @@ import {
   X,
 } from 'lucide-react';
 import { usePanel, type MainRoute } from '../../context/PanelContext';
+import { LanguageSelector } from '../ui/LanguageSelector';
 import { StatusText } from '../ui/StatusText';
 import defaultAvatar from '../../assets/images/avatar_midnightx_user_1795748243919.jpg';
 
@@ -42,6 +43,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
   const {
     theme,
     toggleTheme,
+    t,
     route,
     navigate,
     servers,
@@ -271,25 +273,25 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
       <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-5">
         <div>
           <div className="px-2 mb-1.5 text-[11px] font-medium text-[#777777] dark:text-zinc-500">
-            Workspace
+            {t('nav.workspace')}
           </div>
           <div className="space-y-1">
             <NavRow
-              label="Dashboard"
+              label={t('nav.dashboard')}
               icon={Home}
               active={route.page === 'dashboard'}
               count={onlineCount}
               onClick={() => navigate({ page: 'dashboard' })}
             />
             <NavRow
-              label="Servers"
+              label={t('nav.servers')}
               icon={Server}
               active={route.page === 'servers'}
               count={servers.length}
               onClick={() => navigate({ page: 'servers' })}
             />
             <NavRow
-              label="Console"
+              label={t('nav.console')}
               icon={TerminalSquare}
               active={route.page === 'server-console'}
               onClick={() =>
@@ -299,7 +301,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               }
             />
             <NavRow
-              label="File Manager"
+              label={t('nav.files')}
               icon={FolderOpen}
               active={route.page === 'server-files'}
               onClick={() =>
@@ -313,11 +315,11 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
 
         <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
           <div className="px-2 mb-1.5 text-[11px] font-medium text-[#777777] dark:text-zinc-500">
-            Resources
+            {t('nav.resources')}
           </div>
           <div className="space-y-1">
             <NavRow
-              label="Backups"
+              label={t('nav.backups')}
               icon={Archive}
               active={route.page === 'server-backups'}
               onClick={() =>
@@ -327,7 +329,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               }
             />
             <NavRow
-              label="Databases"
+              label={t('nav.databases')}
               icon={Database}
               active={route.page === 'server-databases'}
               onClick={() =>
@@ -337,7 +339,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               }
             />
             <NavRow
-              label="Network"
+              label={t('nav.network')}
               icon={Network}
               active={route.page === 'server-network'}
               onClick={() =>
@@ -351,36 +353,36 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
 
         <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
           <div className="px-2 mb-1.5 text-[11px] font-medium text-[#777777] dark:text-zinc-500">
-            Platform
+            {t('nav.platform')}
           </div>
           <div className="space-y-1">
             <NavRow
-              label="Billing"
+              label={t('nav.billing')}
               icon={CreditCard}
               active={route.page === 'billing'}
               onClick={() => navigate({ page: 'billing' })}
             />
             <NavRow
-              label="Support"
+              label={t('nav.support')}
               icon={LifeBuoy}
               active={route.page === 'support'}
               onClick={() => navigate({ page: 'support' })}
             />
             <NavRow
-              label="Settings"
+              label={t('nav.settings')}
               icon={Settings}
               active={route.page === 'account'}
               onClick={() => navigate({ page: 'account' })}
             />
             <NavRow
-              label="Classic Panel"
+              label={t('nav.classicPanel')}
               icon={Globe}
               active={false}
               onClick={() => window.open('/?classic=1', '_blank', 'noopener,noreferrer')}
             />
             {(!user || user.role === 'admin') && (
               <NavRow
-                label="Admin Panel"
+                label={t('nav.adminPanel')}
                 icon={Shield}
                 active={route.page === 'admin'}
                 onClick={() => window.open('/admin', '_blank', 'noopener,noreferrer')}
@@ -393,7 +395,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
         <div className="pt-3 border-t border-black/[0.06] dark:border-white/[0.06]">
           <div className="flex items-center justify-between px-2 mb-2">
             <span className="text-[11px] font-medium text-[#777777] dark:text-zinc-500">
-              Server Explorer
+              {t('nav.serverExplorer')}
             </span>
             <button
               type="button"
@@ -411,7 +413,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               type="text"
               value={treeSearch}
               onChange={(e) => setTreeSearch(e.target.value)}
-              placeholder="Search servers"
+              placeholder={t('nav.searchServers')}
               className="mx-input-3d w-full pl-8 pr-3 py-1.5 text-xs rounded-xl text-[#171717] dark:text-zinc-100 placeholder:text-[#777777] dark:placeholder:text-zinc-500"
             />
           </div>
@@ -535,7 +537,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
 
         {/* MAIN CONTENT VIEWPORT */}
         <div className="flex-1 min-w-0 flex flex-col mx-viewport-3d m-1.5 sm:m-2 rounded-[20px] overflow-hidden">
-          <header className="flex items-center justify-between gap-4 px-4 sm:px-6 py-3.5 border-b border-black/[0.06] dark:border-white/[0.06] bg-white/40 dark:bg-black/15">
+          <header className="relative z-30 flex items-center justify-between gap-4 px-4 sm:px-6 py-3.5 border-b border-black/[0.06] dark:border-white/[0.06] bg-white/40 dark:bg-black/15">
             <div className="flex items-center gap-2.5 min-w-0">
               {/* Unified 3-lines sidebar toggle (mobile + desktop) */}
               <button
@@ -613,19 +615,21 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
                 </div>
               )}
 
+              <LanguageSelector />
+
               <button
                 type="button"
                 onClick={() => navigate({ page: 'servers' })}
                 className="mx-btn-3d-dark dark:hidden px-3.5 py-1.5 text-xs font-medium rounded-xl whitespace-nowrap shrink-0 cursor-pointer"
               >
-                All Servers
+                {t('nav.allServers')}
               </button>
               <button
                 type="button"
                 onClick={() => navigate({ page: 'servers' })}
                 className="mx-btn-3d-primary hidden dark:inline-flex px-3.5 py-1.5 text-xs font-medium rounded-xl whitespace-nowrap shrink-0 cursor-pointer"
               >
-                All Servers
+                {t('nav.allServers')}
               </button>
             </div>
           </header>

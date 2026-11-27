@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { PanelApiError, panelApi, toggleLocalFavorite } from '../api/client';
+import { getLanguageOption, translate, type TranslationKey } from '../i18n/translations';
 import type { ActivityLogEntry, PowerSignal, PterodactylServer, UserProfile } from '../types/panel';
 
 export type MainRoute =
@@ -25,6 +26,9 @@ export interface ToastMessage {
 interface PanelContextValue {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  language: string;
+  setLanguage: (code: string) => void;
+  t: (key: TranslationKey) => string;
   route: MainRoute;
   navigate: (next: MainRoute) => void;
   servers: PterodactylServer[];
@@ -110,6 +114,14 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
+  const [language, setLanguageState] = useState<string>(() => {
+    try {
+      return localStorage.getItem('midnightx_language') || 'en';
+    } catch {
+      return 'en';
+    }
+  });
+
   const [route, setRoute] = useState<MainRoute>(() => parsePathname(window.location.pathname));
   const [servers, setServers] = useState<PterodactylServer[]>([]);
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -131,6 +143,23 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
       // ignore storage errors
     }
   }, [theme]);
+
+  useEffect(() => {
+    const opt = getLanguageOption(language);
+    document.documentElement.lang = opt.code;
+    document.documentElement.dir = opt.rtl ? 'rtl' : 'ltr';
+    try {
+      localStorage.setItem('midnightx_language', opt.code);
+    } catch {
+      // ignore storage errors
+    }
+  }, [language]);
+
+  const setLanguage = useCallback((code: string) => {
+    setLanguageState(code);
+  }, []);
+
+  const t = useCallback((key: TranslationKey) => translate(language, key), [language]);
 
   useEffect(() => {
     const onPopState = () => setRoute(parsePathname(window.location.pathname));
@@ -239,6 +268,9 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
       value={{
         theme,
         toggleTheme,
+        language,
+        setLanguage,
+        t,
         route,
         navigate,
         servers,

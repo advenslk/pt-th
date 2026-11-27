@@ -17,7 +17,7 @@ import { PanelConnectionNotice } from '../components/ui/PanelConnectionNotice';
 import defaultAvatar from '../assets/images/avatar_midnightx_user_1795748243919.jpg';
 
 export function DashboardPage() {
-  const { servers, user, activityLogs, navigate, loading, panelConnected, connectionError } = usePanel();
+  const { servers, user, activityLogs, navigate, loading, panelConnected, connectionError, t } = usePanel();
   const [history, setHistory] = useState<TelemetryPoint[]>([]);
 
   const stats = useMemo(() => {
@@ -105,7 +105,7 @@ export function DashboardPage() {
           </div>
           <div className="min-w-0">
             <h1 className="mx-heading-3d text-xl sm:text-2xl font-bold text-[#171717] dark:text-white truncate">
-              Welcome back, {displayName}
+              {t('dash.welcome')}, {displayName}
             </h1>
             <p className="text-xs sm:text-sm text-[#777777] dark:text-zinc-400 flex flex-wrap items-center gap-2 mt-0.5">
               <span>{user?.email}</span>
@@ -132,7 +132,7 @@ export function DashboardPage() {
               className="mx-btn-3d-primary inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              Create Server
+              {t('dash.createServer')}
             </button>
           )}
           {primaryServer && (
@@ -143,7 +143,7 @@ export function DashboardPage() {
                 className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <TerminalSquare className="w-3.5 h-3.5 text-[#8B5CF6]" />
-                Open Console
+                {t('dash.openConsole')}
               </button>
               <button
                 type="button"
@@ -151,7 +151,7 @@ export function DashboardPage() {
                 className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <Archive className="w-3.5 h-3.5 text-[#06B6D4]" />
-                Manage Backups
+                {t('dash.manageBackups')}
               </button>
               <button
                 type="button"
@@ -159,7 +159,7 @@ export function DashboardPage() {
                 className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <FolderOpen className="w-3.5 h-3.5 text-[#777777] dark:text-zinc-400" />
-                View Files
+                {t('dash.viewFiles')}
               </button>
             </>
           )}
@@ -170,7 +170,7 @@ export function DashboardPage() {
       <section aria-label="Infrastructure summary">
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3.5">
           <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Total Servers</div>
+            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.totalServers')}</div>
             <div className="mt-2 text-2xl font-bold mx-stat-3d text-[#171717] dark:text-white">
               {stats.total}
             </div>
@@ -178,7 +178,7 @@ export function DashboardPage() {
           </div>
 
           <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Online Servers</div>
+            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.onlineServers')}</div>
             <div className="mt-2 text-2xl font-bold mx-stat-3d-emerald">
               {stats.online}
             </div>
@@ -186,7 +186,7 @@ export function DashboardPage() {
           </div>
 
           <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Offline Servers</div>
+            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.offlineServers')}</div>
             <div className="mt-2 text-2xl font-bold mx-stat-3d text-[#171717] dark:text-zinc-200">
               {stats.offline}
             </div>
@@ -194,7 +194,7 @@ export function DashboardPage() {
           </div>
 
           <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">CPU Usage</div>
+            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.cpuUsage')}</div>
             <div className="mt-2 text-2xl font-bold mx-stat-3d-violet">
               {stats.avgCpuPercent.toFixed(1)}%
             </div>
@@ -204,7 +204,7 @@ export function DashboardPage() {
           </div>
 
           <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">RAM Usage</div>
+            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.ramUsage')}</div>
             <div className="mt-2 text-2xl font-bold mx-stat-3d-cyan">
               {stats.memPercent.toFixed(1)}%
             </div>
@@ -214,7 +214,7 @@ export function DashboardPage() {
           </div>
 
           <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Disk Usage</div>
+            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">{t('dash.diskUsage')}</div>
             <div className="mt-2 text-2xl font-bold mx-stat-3d text-[#171717] dark:text-white">
               {stats.diskPercent.toFixed(1)}%
             </div>
@@ -231,7 +231,7 @@ export function DashboardPage() {
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
               <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
-                Cluster Resource Telemetry
+                {t('dash.telemetry')}
               </h2>
               <p className="text-xs text-[#777777] dark:text-zinc-400 mt-0.5">
                 Live CPU & memory readings polled from Pterodactyl Wings
@@ -251,7 +251,7 @@ export function DashboardPage() {
         <section className="xl:col-span-4 mx-card-3d p-5 sm:p-6 rounded-2xl flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
-              Recent Activity
+              {t('dash.recentActivity')}
             </h2>
             <button
               type="button"
@@ -292,7 +292,7 @@ export function DashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
-              Server Overview
+              {t('dash.serverOverview')}
             </h2>
             <p className="text-xs text-[#777777] dark:text-zinc-400 mt-0.5">
               Select an instance to open its real-time Wings terminal and file explorer
