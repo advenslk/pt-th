@@ -337,7 +337,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={() => {
                 setAccountMenuOpen(false);
-                navigate({ page: 'admin', section: 'overview' });
+                window.open('/admin', '_blank', 'noopener,noreferrer');
               }}
               className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-[#171717] dark:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.06] cursor-pointer"
             >
@@ -453,12 +453,18 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               active={route.page === 'account'}
               onClick={() => navigate({ page: 'account' })}
             />
+            <NavRow
+              label="Classic Panel"
+              icon={Globe}
+              active={false}
+              onClick={() => window.open('/?classic=1', '_blank', 'noopener,noreferrer')}
+            />
             {(!user || user.role === 'admin') && (
               <NavRow
                 label="Admin Panel"
                 icon={Shield}
                 active={route.page === 'admin'}
-                onClick={() => navigate({ page: 'admin', section: 'overview' })}
+                onClick={() => window.open('/admin', '_blank', 'noopener,noreferrer')}
               />
             )}
           </div>
@@ -623,7 +629,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
             <div className="relative group w-full flex justify-center">
               <button
                 type="button"
-                onClick={() => navigate({ page: 'admin', section: 'overview' })}
+                onClick={() => window.open('/admin', '_blank', 'noopener,noreferrer')}
                 aria-label="Admin Panel"
                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all active:translate-y-[1px] cursor-pointer ${
                   route.page === 'admin'

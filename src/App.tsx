@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
+import { ExternalLink } from 'lucide-react';
 import { MidnightShell } from './components/layout/MidnightShell';
 import { PanelProvider, usePanel } from './context/PanelContext';
 import { AdminPanelPage } from './pages/AdminPanelPage';
@@ -42,6 +43,16 @@ function ServerSubNav({ serverId, active }: { serverId: string; active: string }
           </button>
         );
       })}
+      <button
+        type="button"
+        onClick={() =>
+          window.open(`/server/${encodeURIComponent(serverId)}?classic=1`, '_blank', 'noopener,noreferrer')
+        }
+        title="Open the full original server manager (schedules, startup, users, settings)"
+        className="px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 text-[#525252] dark:text-zinc-400 hover:text-[#171717] dark:hover:text-white transition-all cursor-pointer inline-flex items-center gap-1.5"
+      >
+        Classic Tools <ExternalLink className="w-3 h-3" />
+      </button>
     </div>
   );
 }

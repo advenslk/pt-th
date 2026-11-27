@@ -6,6 +6,9 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    // Served from Pterodactyl's public directory at /midnightx while the app
+    // itself is rendered at the panel root by the Blade wrapper.
+    base: '/midnightx/',
     plugins: [
       react(),
       tailwindcss(),
