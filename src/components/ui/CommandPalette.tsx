@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Archive,
+  Award,
+  Bell,
   CalendarClock,
   Command,
   CreditCard,
@@ -9,6 +11,7 @@ import {
   History,
   Home,
   LifeBuoy,
+  MessageSquare,
   MonitorCog,
   Network,
   PanelLeft,
@@ -163,10 +166,37 @@ export function CommandPalette() {
         id: 'page:support',
         group: 'Pages',
         label: 'Support Tickets',
-        subtitle: 'Helpdesk & ticket replies',
-        keywords: 'support help tickets',
+        subtitle: 'Helpdesk, attachments & Knowledge Base',
+        keywords: 'support help tickets kb knowledge base',
         icon: LifeBuoy,
         onSelect: () => go({ page: 'support' }),
+      },
+      {
+        id: 'page:rewards',
+        group: 'Pages',
+        label: 'Rewards & VIP',
+        subtitle: 'Daily streaks, XP leaderboard, badges & reward shop',
+        keywords: 'rewards loyalty vip xp badges shop leaderboard referral',
+        icon: Award,
+        onSelect: () => go({ page: 'rewards' }),
+      },
+      {
+        id: 'page:community',
+        group: 'Pages',
+        label: 'Community Forum',
+        subtitle: 'Discussions, tutorials, reactions & trending hashtags',
+        keywords: 'community forum posts comments hashtags follow',
+        icon: MessageSquare,
+        onSelect: () => go({ page: 'community' }),
+      },
+      {
+        id: 'page:updates',
+        group: 'Pages',
+        label: 'Updates, Status & Notifications',
+        subtitle: 'Announcements, service incidents & alert channels',
+        keywords: 'updates announcements status incidents notifications webhook discord telegram',
+        icon: Bell,
+        onSelect: () => go({ page: 'updates' }),
       }
     );
 

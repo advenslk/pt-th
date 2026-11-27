@@ -25,6 +25,10 @@ if [[ -f "$BACKUP_DIR/base-routes.php" ]]; then
   cp "$BACKUP_DIR/base-routes.php" "$PANEL_DIR/routes/base.php"
 fi
 
+if [[ -f "$BACKUP_DIR/api-client.php" ]]; then
+  cp "$BACKUP_DIR/api-client.php" "$PANEL_DIR/routes/api-client.php"
+fi
+
 ADMIN_BLADE="$PANEL_DIR/resources/views/layouts/admin.blade.php"
 if [[ -f "$BACKUP_DIR/admin.blade.php" ]]; then
   cp "$BACKUP_DIR/admin.blade.php" "$ADMIN_BLADE"

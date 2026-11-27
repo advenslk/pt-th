@@ -3,7 +3,18 @@ import type { ActivityLogEntry, ApiKeyEntry, PterodactylServer, SshKeyEntry, Use
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
 export type FontScale = 'compact' | 'default' | 'large';
-export type DashboardWidgetId = 'stats' | 'telemetry' | 'servers' | 'security';
+export type DashboardBgPreset = 'default' | 'aurora' | 'cosmos' | 'obsidian';
+export type DashboardWidgetId =
+  | 'stats'
+  | 'telemetry'
+  | 'servers'
+  | 'security'
+  | 'announcements'
+  | 'status'
+  | 'wallet'
+  | 'rewards'
+  | 'notifications'
+  | 'quickSupport';
 
 export interface AccessibilityPrefs {
   fontScale: FontScale;
@@ -16,6 +27,7 @@ export interface DashboardPrefs {
   widgetOrder: DashboardWidgetId[];
   hiddenWidgets: DashboardWidgetId[];
   showQuickBar: boolean;
+  bgPreset: DashboardBgPreset;
 }
 
 export interface SavedPageRef {
@@ -40,11 +52,25 @@ export const DEFAULT_ACCESSIBILITY_PREFS: AccessibilityPrefs = {
   highContrast: false,
 };
 
+const ALL_WIDGETS: DashboardWidgetId[] = [
+  'stats',
+  'telemetry',
+  'servers',
+  'security',
+  'announcements',
+  'status',
+  'wallet',
+  'rewards',
+  'notifications',
+  'quickSupport',
+];
+
 export const DEFAULT_DASHBOARD_PREFS: DashboardPrefs = {
   customGreeting: '',
-  widgetOrder: ['stats', 'telemetry', 'servers', 'security'],
-  hiddenWidgets: ['security'],
+  widgetOrder: ALL_WIDGETS,
+  hiddenWidgets: ['security', 'announcements', 'status', 'wallet', 'rewards', 'notifications', 'quickSupport'],
   showQuickBar: false,
+  bgPreset: 'default',
 };
 
 export function loadThemeMode(): ThemeMode {
@@ -94,25 +120,37 @@ export function loadDashboardPrefs(): DashboardPrefs {
     const raw = localStorage.getItem(KEYS.dashboard);
     if (!raw) return DEFAULT_DASHBOARD_PREFS;
     const parsed = JSON.parse(raw);
-    const validIds: DashboardWidgetId[] = ['stats', 'telemetry', 'servers', 'security'];
     const order = Array.isArray(parsed.widgetOrder)
       ? (parsed.widgetOrder.filter((x: unknown): x is DashboardWidgetId =>
-          validIds.includes(x as DashboardWidgetId)
+          ALL_WIDGETS.includes(x as DashboardWidgetId)
         ) as DashboardWidgetId[])
-      : DEFAULT_DASHBOARD_PREFS.widgetOrder;
-    for (const id of validIds) {
-      if (!order.includes(id)) order.push(id);
-    }
+      : [...DEFAULT_DASHBOARD_PREFS.widgetOrder];
     const hidden = Array.isArray(parsed.hiddenWidgets)
       ? parsed.hiddenWidgets.filter((x: unknown): x is DashboardWidgetId =>
-          validIds.includes(x as DashboardWidgetId)
+          ALL_WIDGETS.includes(x as DashboardWidgetId)
         )
-      : DEFAULT_DASHBOARD_PREFS.hiddenWidgets;
+      : [...DEFAULT_DASHBOARD_PREFS.hiddenWidgets];
+
+    for (const id of ALL_WIDGETS) {
+      if (!order.includes(id)) {
+        order.push(id);
+        if (DEFAULT_DASHBOARD_PREFS.hiddenWidgets.includes(id) && !hidden.includes(id)) {
+          hidden.push(id);
+        }
+      }
+    }
+
+    const bgPreset: DashboardBgPreset =
+      parsed.bgPreset === 'aurora' || parsed.bgPreset === 'cosmos' || parsed.bgPreset === 'obsidian'
+        ? parsed.bgPreset
+        : 'default';
+
     return {
       customGreeting: typeof parsed.customGreeting === 'string' ? parsed.customGreeting : '',
       widgetOrder: order,
       hiddenWidgets: hidden,
       showQuickBar: Boolean(parsed.showQuickBar),
+      bgPreset,
     };
   } catch {
     return DEFAULT_DASHBOARD_PREFS;
@@ -172,9 +210,15 @@ export function getRouteMetadata(route: MainRoute, activeServerName?: string): {
     case 'account':
       return { id: 'account', label: 'Account & Security' };
     case 'billing':
-      return { id: 'billing', label: 'Billing & Hosting' };
+      return { id: 'billing', label: 'Billing & Wallet' };
     case 'support':
-      return { id: 'support', label: 'Support Tickets' };
+      return { id: 'support', label: 'Support & KB' };
+    case 'rewards':
+      return { id: 'rewards', label: 'Rewards & VIP' };
+    case 'community':
+      return { id: 'community', label: 'Community Forum' };
+    case 'updates':
+      return { id: 'updates', label: 'Updates & Status' };
     case 'admin':
       return { id: `admin:${route.section || 'overview'}`, label: `Admin (${route.section || 'overview'})` };
     default: {
