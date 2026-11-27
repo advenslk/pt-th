@@ -61,33 +61,64 @@ Run MidnightX as a standalone Node/Express host that proxies `/api/client/*` and
 
 This clone is installed at `/var/www/pterodactyl/midnightx` and is the **default signed-in theme** on the panel. The Blade wrapper loads `/midnightx/assets/...`, while guests still get the stock Pterodactyl login screens.
 
-### Everyday commands
+### All commands
+
+Run everything from the repo directory:
 
 ```bash
 cd /var/www/pterodactyl/midnightx
-
-# 1. After you change any file here: build + install into the panel
-./deploy.sh
-
-# 2. Commit your changes and push them to this GitHub repo
-./push.sh "describe what you changed"
-
-# 3. Undo the theme install and restore the original panel theme
-./reset.sh                       # uses the newest /root/midnightx-install-backup-*
-./reset.sh /path/to/backup        # or pass a backup directory explicitly
 ```
 
-You can also do it manually:
+| Command | What it does |
+|---|---|
+| `./pull.sh` | **Pull** latest GitHub changes → build → install → restart PHP-FPM/Nginx |
+| `./pull.sh main` | Same, but force a specific branch |
+| `./push.sh "message"` | **Commit and push** your local changes to GitHub |
+| `./deploy.sh` | Build and install the current files into the panel (no git pull) |
+| `./restart.sh` | Clear caches, restart queue workers, restart PHP-FPM, reload Nginx |
+| `./reset.sh` | **Roll back** to the original Pterodactyl theme |
+| `./reset.sh /path/to/backup` | Roll back using a specific backup directory |
+| `./status.sh` | Show local/remote commits, built asset name, service status, URLs |
+
+Typical workflow after you edit the theme from another machine:
 
 ```bash
+# on this server: get the new code and make it live
+./pull.sh
+
+# if you edited files directly on this server: publish them
+./push.sh "describe what you changed"
+
+# if something is wrong: restore the original panel theme
+./reset.sh
+```
+
+Manual equivalents (no scripts):
+
+```bash
+# pull + deploy
+git pull origin main
 npm install --legacy-peer-deps
 npm run build
 rm -rf /var/www/pterodactyl/public/midnightx/*
 cp -r dist/* /var/www/pterodactyl/public/midnightx/
 chown -R www-data:www-data /var/www/pterodactyl/public/midnightx
-cd /var/www/pterodactyl && php artisan view:clear && php artisan route:clear && php artisan view:cache && php artisan route:cache
+cd /var/www/pterodactyl
+php artisan optimize:clear
+php artisan view:cache
+php artisan route:cache
+php artisan queue:restart
+systemctl restart php8.3-fpm
+systemctl reload nginx
 
+# push
+cd /var/www/pterodactyl/midnightx
 git add -A && git commit -m "message" && git push origin main
+
+# reset
+cp /root/midnightx-install-backup-*/wrapper.blade.php /var/www/pterodactyl/resources/views/templates/wrapper.blade.php
+cp /root/midnightx-install-backup-*/base-routes.php /var/www/pterodactyl/routes/base.php
+cd /var/www/pterodactyl && php artisan view:clear && php artisan route:clear && php artisan view:cache && php artisan route:cache
 ```
 
 ### Full server management
