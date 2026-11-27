@@ -11,6 +11,11 @@ export type MainRoute =
   | { page: 'server-backups'; serverId: string }
   | { page: 'server-databases'; serverId: string }
   | { page: 'server-network'; serverId: string }
+  | { page: 'server-schedules'; serverId: string }
+  | { page: 'server-users'; serverId: string }
+  | { page: 'server-startup'; serverId: string }
+  | { page: 'server-settings'; serverId: string }
+  | { page: 'server-activity'; serverId: string }
   | { page: 'account' }
   | { page: 'billing' }
   | { page: 'support' }
@@ -58,7 +63,7 @@ function parsePathname(pathname: string): MainRoute {
   const clean = pathname.replace(/\/+$/, '') || '/';
   if (clean === '/' || clean === '/dashboard') return { page: 'dashboard' };
   if (clean === '/servers') return { page: 'servers' };
-  if (clean === '/account') return { page: 'account' };
+  if (clean === '/account' || clean.startsWith('/account/')) return { page: 'account' };
   if (clean === '/billing') return { page: 'billing' };
   if (clean === '/support') return { page: 'support' };
   if (clean.startsWith('/admin')) {
@@ -73,6 +78,11 @@ function parsePathname(pathname: string): MainRoute {
     if (sub === 'backups') return { page: 'server-backups', serverId };
     if (sub === 'databases') return { page: 'server-databases', serverId };
     if (sub === 'network') return { page: 'server-network', serverId };
+    if (sub === 'schedules') return { page: 'server-schedules', serverId };
+    if (sub === 'users') return { page: 'server-users', serverId };
+    if (sub === 'startup') return { page: 'server-startup', serverId };
+    if (sub === 'settings') return { page: 'server-settings', serverId };
+    if (sub === 'activity') return { page: 'server-activity', serverId };
     return { page: 'server-console', serverId };
   }
   return { page: 'dashboard' };
@@ -94,6 +104,16 @@ function routeToPath(route: MainRoute): string {
       return `/server/${encodeURIComponent(route.serverId)}/databases`;
     case 'server-network':
       return `/server/${encodeURIComponent(route.serverId)}/network`;
+    case 'server-schedules':
+      return `/server/${encodeURIComponent(route.serverId)}/schedules`;
+    case 'server-users':
+      return `/server/${encodeURIComponent(route.serverId)}/users`;
+    case 'server-startup':
+      return `/server/${encodeURIComponent(route.serverId)}/startup`;
+    case 'server-settings':
+      return `/server/${encodeURIComponent(route.serverId)}/settings`;
+    case 'server-activity':
+      return `/server/${encodeURIComponent(route.serverId)}/activity`;
     case 'account':
       return '/account';
     case 'billing':
@@ -251,13 +271,7 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const activeServerId =
-    route.page === 'server-console' ||
-    route.page === 'server-files' ||
-    route.page === 'server-backups' ||
-    route.page === 'server-databases' ||
-    route.page === 'server-network'
-      ? route.serverId
-      : null;
+    route.page.startsWith('server-') && 'serverId' in route ? route.serverId : null;
 
   const activeServer = activeServerId
     ? servers.find((s) => s.id === activeServerId || s.identifier === activeServerId) || servers[0] || null

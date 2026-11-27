@@ -70,11 +70,16 @@ export type TranslationKey =
   | 'nav.backups'
   | 'nav.databases'
   | 'nav.network'
+  | 'nav.schedules'
+  | 'nav.users'
+  | 'nav.startup'
+  | 'nav.serverSettings'
+  | 'nav.activity'
   | 'nav.billing'
   | 'nav.support'
   | 'nav.settings'
-  | 'nav.classicPanel'
   | 'nav.adminPanel'
+  | 'nav.logout'
   | 'nav.serverExplorer'
   | 'nav.searchServers'
   | 'nav.allServers'
@@ -106,11 +111,16 @@ const EN: Record<TranslationKey, string> = {
   'nav.backups': 'Backups',
   'nav.databases': 'Databases',
   'nav.network': 'Network',
+  'nav.schedules': 'Schedules',
+  'nav.users': 'Users',
+  'nav.startup': 'Startup',
+  'nav.serverSettings': 'Server Settings',
+  'nav.activity': 'Activity',
   'nav.billing': 'Billing',
   'nav.support': 'Support',
-  'nav.settings': 'Settings',
-  'nav.classicPanel': 'Classic Panel',
+  'nav.settings': 'Account Settings',
   'nav.adminPanel': 'Admin Panel',
+  'nav.logout': 'Sign Out',
   'nav.serverExplorer': 'Server Explorer',
   'nav.searchServers': 'Search servers',
   'nav.allServers': 'All Servers',
@@ -146,11 +156,16 @@ const TRANSLATIONS: Record<string, Partial<Record<TranslationKey, string>>> = {
     'nav.backups': 'උපස්ථ (Backups)',
     'nav.databases': 'දත්ත සමුදායන්',
     'nav.network': 'ජාලය',
+    'nav.schedules': 'කාලසටහන්',
+    'nav.users': 'පරිශීලකයන්',
+    'nav.startup': 'ආරම්භක සැකසුම්',
+    'nav.serverSettings': 'සර්වර් සැකසුම්',
+    'nav.activity': 'ක්‍රියාකාරකම්',
     'nav.billing': 'බිල්පත්',
     'nav.support': 'සහාය',
-    'nav.settings': 'සැකසුම්',
-    'nav.classicPanel': 'පැරණි පුවරුව',
+    'nav.settings': 'ගිණුම් සැකසුම්',
     'nav.adminPanel': 'පරිපාලක පුවරුව',
+    'nav.logout': 'ඉවත් වන්න',
     'nav.serverExplorer': 'සර්වර් ගවේෂකය',
     'nav.searchServers': 'සර්වර් සොයන්න',
     'nav.allServers': 'සියලු සර්වර්',

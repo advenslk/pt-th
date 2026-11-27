@@ -1,5 +1,4 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { ExternalLink } from 'lucide-react';
 import { MidnightShell } from './components/layout/MidnightShell';
 import { PanelProvider, usePanel } from './context/PanelContext';
 import { AdminPanelPage } from './pages/AdminPanelPage';
@@ -9,8 +8,13 @@ import { DashboardPage } from './pages/DashboardPage';
 import { DatabasesPage } from './pages/DatabasesPage';
 import { FileManagerPage } from './pages/FileManagerPage';
 import { NetworkPage } from './pages/NetworkPage';
+import { SchedulesPage } from './pages/SchedulesPage';
+import { ServerActivityPage } from './pages/ServerActivityPage';
 import { ServerConsolePage } from './pages/ServerConsolePage';
+import { ServerSettingsPage } from './pages/ServerSettingsPage';
 import { ServersPage } from './pages/ServersPage';
+import { ServerUsersPage } from './pages/ServerUsersPage';
+import { StartupPage } from './pages/StartupPage';
 import { SupportPage } from './pages/SupportPage';
 import { UserProfilePage } from './pages/UserProfilePage';
 
@@ -19,9 +23,14 @@ function ServerSubNav({ serverId, active }: { serverId: string; active: string }
   const tabs = [
     { id: 'server-console', label: 'Console' },
     { id: 'server-files', label: 'Files' },
-    { id: 'server-backups', label: 'Backups' },
     { id: 'server-databases', label: 'Databases' },
+    { id: 'server-schedules', label: 'Schedules' },
+    { id: 'server-users', label: 'Users' },
+    { id: 'server-backups', label: 'Backups' },
     { id: 'server-network', label: 'Network' },
+    { id: 'server-startup', label: 'Startup' },
+    { id: 'server-settings', label: 'Settings' },
+    { id: 'server-activity', label: 'Activity' },
   ] as const;
 
   return (
@@ -43,16 +52,6 @@ function ServerSubNav({ serverId, active }: { serverId: string; active: string }
           </button>
         );
       })}
-      <button
-        type="button"
-        onClick={() =>
-          window.open(`/server/${encodeURIComponent(serverId)}?classic=1`, '_blank', 'noopener,noreferrer')
-        }
-        title="Open the full original server manager (schedules, startup, users, settings)"
-        className="px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 text-[#525252] dark:text-zinc-400 hover:text-[#171717] dark:hover:text-white transition-all cursor-pointer inline-flex items-center gap-1.5"
-      >
-        Classic Tools <ExternalLink className="w-3 h-3" />
-      </button>
     </div>
   );
 }
@@ -89,6 +88,11 @@ function PanelRouter() {
           {route.page === 'server-backups' && <BackupsPage serverId={route.serverId} />}
           {route.page === 'server-databases' && <DatabasesPage serverId={route.serverId} />}
           {route.page === 'server-network' && <NetworkPage serverId={route.serverId} />}
+          {route.page === 'server-schedules' && <SchedulesPage serverId={route.serverId} />}
+          {route.page === 'server-users' && <ServerUsersPage serverId={route.serverId} />}
+          {route.page === 'server-startup' && <StartupPage serverId={route.serverId} />}
+          {route.page === 'server-settings' && <ServerSettingsPage serverId={route.serverId} />}
+          {route.page === 'server-activity' && <ServerActivityPage serverId={route.serverId} />}
           {route.page === 'account' && <UserProfilePage />}
           {route.page === 'billing' && <BillingPage />}
           {route.page === 'support' && <SupportPage />}

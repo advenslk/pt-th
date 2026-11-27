@@ -11,10 +11,18 @@ import type {
   DatabaseEntry,
   FileEntry,
   PanelSettings,
+  PermissionGroupMap,
   PowerSignal,
   PterodactylServer,
+  ScheduleTask,
+  ScheduleTaskAction,
   ServerCategory,
+  ServerSchedule,
+  ServerStartupData,
   ServerStatus,
+  ServerSubuser,
+  SshKeyEntry,
+  StartupVariable,
   SupportTicket,
   UserProfile,
 } from '../types/panel';
@@ -125,6 +133,15 @@ function normalizeServer(item: any, resources?: any): PterodactylServer {
       io: attr.limits?.io ?? 500,
       cpu: attr.limits?.cpu ?? 0,
     },
+    featureLimits: {
+      databases: Number(attr.feature_limits?.databases ?? 0),
+      allocations: Number(attr.feature_limits?.allocations ?? 0),
+      backups: Number(attr.feature_limits?.backups ?? 0),
+    },
+    sftpDetails: {
+      ip: attr.sftp_details?.ip || '',
+      port: Number(attr.sftp_details?.port ?? 2022),
+    },
     resources: {
       cpuPercent: Number(resAttr.cpu_absolute ?? 0),
       memoryBytes: Number(resAttr.memory_bytes ?? 0),
@@ -139,6 +156,8 @@ function normalizeServer(item: any, resources?: any): PterodactylServer {
     createdAt: attr.created_at || new Date().toISOString(),
     renewalDate: attr.renewal_date || '',
     ownerId: attr.server_owner ? 1 : 0,
+    isServerOwner: Boolean(attr.server_owner),
+    userPermissions: Array.isArray(attr.user_permissions) ? attr.user_permissions : [],
   };
 }
 
@@ -311,6 +330,41 @@ export const panelApi = {
   deleteApiKey: (identifier: string) =>
     rawRequest(`/api/client/account/api-keys/${encodeURIComponent(identifier)}`, { method: 'DELETE' }),
 
+  getSshKeys: async (): Promise<SshKeyEntry[]> => {
+    const res = await jsonRequest<{ data: any[] }>('/api/client/account/ssh-keys');
+    return (res.data || []).map((k) => {
+      const a = k.attributes || k;
+      return {
+        name: a.name,
+        fingerprint: a.fingerprint,
+        publicKey: a.public_key,
+        createdAt: a.created_at,
+      };
+    });
+  },
+
+  createSshKey: async (name: string, publicKey: string): Promise<SshKeyEntry> => {
+    const res = await jsonRequest<{ attributes: any }>('/api/client/account/ssh-keys', {
+      method: 'POST',
+      body: JSON.stringify({ name, public_key: publicKey }),
+    });
+    const a = res.attributes || res;
+    return {
+      name: a.name,
+      fingerprint: a.fingerprint,
+      publicKey: a.public_key,
+      createdAt: a.created_at,
+    };
+  },
+
+  deleteSshKey: (fingerprint: string) =>
+    rawRequest('/api/client/account/ssh-keys/remove', {
+      method: 'POST',
+      body: JSON.stringify({ fingerprint }),
+    }),
+
+  logout: () => rawRequest('/auth/logout', { method: 'POST' }),
+
   getAccountActivity: async (): Promise<ActivityLogEntry[]> => {
     const res = await jsonRequest<{ data: any[] }>('/api/client/account/activity');
     return (res.data || []).map((item) => {
@@ -329,6 +383,7 @@ export const panelApi = {
             : a.event?.startsWith('server:power')
               ? 'power'
               : 'auth',
+        properties: a.properties || {},
       };
     });
   },
@@ -553,6 +608,288 @@ export const panelApi = {
     rawRequest(`/api/client/servers/${encodeURIComponent(identifier)}/network/allocations/${allocId}`, {
       method: 'DELETE',
     }),
+
+  // Schedules & Tasks
+  listSchedules: async (identifier: string): Promise<ServerSchedule[]> => {
+    const res = await jsonRequest<{ data: any[] }>(`/api/client/servers/${encodeURIComponent(identifier)}/schedules`);
+    return (res.data || []).map((s) => {
+      const a = s.attributes || s;
+      const rawTasks = a.relationships?.tasks?.data || [];
+      const tasks: ScheduleTask[] = rawTasks
+        .map((t: any) => {
+          const ta = t.attributes || t;
+          return {
+            id: ta.id,
+            sequenceId: Number(ta.sequence_id ?? 1),
+            action: (ta.action || 'command') as ScheduleTaskAction,
+            payload: ta.payload || '',
+            timeOffset: Number(ta.time_offset ?? 0),
+            isQueued: Boolean(ta.is_queued),
+            continueOnFailure: Boolean(ta.continue_on_failure),
+            createdAt: ta.created_at,
+            updatedAt: ta.updated_at,
+          };
+        })
+        .sort((x: ScheduleTask, y: ScheduleTask) => x.sequenceId - y.sequenceId);
+
+      return {
+        id: a.id,
+        name: a.name,
+        cron: {
+          dayOfWeek: a.cron?.day_of_week ?? '*',
+          dayOfMonth: a.cron?.day_of_month ?? '*',
+          month: a.cron?.month ?? '*',
+          hour: a.cron?.hour ?? '*',
+          minute: a.cron?.minute ?? '*',
+        },
+        isActive: Boolean(a.is_active),
+        isProcessing: Boolean(a.is_processing),
+        onlyWhenOnline: Boolean(a.only_when_online),
+        lastRunAt: a.last_run_at || null,
+        nextRunAt: a.next_run_at || null,
+        createdAt: a.created_at,
+        updatedAt: a.updated_at,
+        tasks,
+      };
+    });
+  },
+
+  createSchedule: (
+    identifier: string,
+    payload: {
+      name: string;
+      minute: string;
+      hour: string;
+      dayOfMonth: string;
+      month: string;
+      dayOfWeek: string;
+      isActive: boolean;
+      onlyWhenOnline: boolean;
+    }
+  ) =>
+    jsonRequest(`/api/client/servers/${encodeURIComponent(identifier)}/schedules`, {
+      method: 'POST',
+      body: JSON.stringify({
+        name: payload.name,
+        minute: payload.minute,
+        hour: payload.hour,
+        day_of_month: payload.dayOfMonth,
+        month: payload.month,
+        day_of_week: payload.dayOfWeek,
+        is_active: payload.isActive,
+        only_when_online: payload.onlyWhenOnline,
+      }),
+    }),
+
+  updateSchedule: (
+    identifier: string,
+    scheduleId: number,
+    payload: {
+      name: string;
+      minute: string;
+      hour: string;
+      dayOfMonth: string;
+      month: string;
+      dayOfWeek: string;
+      isActive: boolean;
+      onlyWhenOnline: boolean;
+    }
+  ) =>
+    jsonRequest(`/api/client/servers/${encodeURIComponent(identifier)}/schedules/${scheduleId}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        name: payload.name,
+        minute: payload.minute,
+        hour: payload.hour,
+        day_of_month: payload.dayOfMonth,
+        month: payload.month,
+        day_of_week: payload.dayOfWeek,
+        is_active: payload.isActive,
+        only_when_online: payload.onlyWhenOnline,
+      }),
+    }),
+
+  executeSchedule: (identifier: string, scheduleId: number) =>
+    rawRequest(`/api/client/servers/${encodeURIComponent(identifier)}/schedules/${scheduleId}/execute`, {
+      method: 'POST',
+    }),
+
+  deleteSchedule: (identifier: string, scheduleId: number) =>
+    rawRequest(`/api/client/servers/${encodeURIComponent(identifier)}/schedules/${scheduleId}`, {
+      method: 'DELETE',
+    }),
+
+  createScheduleTask: (
+    identifier: string,
+    scheduleId: number,
+    payload: { action: ScheduleTaskAction; payload: string; timeOffset: number; continueOnFailure: boolean }
+  ) =>
+    jsonRequest(`/api/client/servers/${encodeURIComponent(identifier)}/schedules/${scheduleId}/tasks`, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: payload.action,
+        payload: payload.payload,
+        time_offset: payload.timeOffset,
+        continue_on_failure: payload.continueOnFailure,
+      }),
+    }),
+
+  updateScheduleTask: (
+    identifier: string,
+    scheduleId: number,
+    taskId: number,
+    payload: { action: ScheduleTaskAction; payload: string; timeOffset: number; continueOnFailure: boolean }
+  ) =>
+    jsonRequest(`/api/client/servers/${encodeURIComponent(identifier)}/schedules/${scheduleId}/tasks/${taskId}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: payload.action,
+        payload: payload.payload,
+        time_offset: payload.timeOffset,
+        continue_on_failure: payload.continueOnFailure,
+      }),
+    }),
+
+  deleteScheduleTask: (identifier: string, scheduleId: number, taskId: number) =>
+    rawRequest(`/api/client/servers/${encodeURIComponent(identifier)}/schedules/${scheduleId}/tasks/${taskId}`, {
+      method: 'DELETE',
+    }),
+
+  // Sub-Users & Permissions
+  getClientPermissions: async (): Promise<PermissionGroupMap> => {
+    const res = await jsonRequest<{ attributes: { permissions: PermissionGroupMap } }>('/api/client/permissions');
+    return res.attributes?.permissions || {};
+  },
+
+  listSubusers: async (identifier: string): Promise<ServerSubuser[]> => {
+    const res = await jsonRequest<{ data: any[] }>(`/api/client/servers/${encodeURIComponent(identifier)}/users`);
+    return (res.data || []).map((u) => {
+      const a = u.attributes || u;
+      return {
+        uuid: a.uuid,
+        username: a.username,
+        email: a.email,
+        image: a.image || '',
+        twoFactorEnabled: Boolean(a['2fa_enabled'] ?? a.two_factor_enabled),
+        createdAt: a.created_at,
+        permissions: Array.isArray(a.permissions) ? a.permissions : [],
+      };
+    });
+  },
+
+  createSubuser: (identifier: string, email: string, permissions: string[]) =>
+    jsonRequest(`/api/client/servers/${encodeURIComponent(identifier)}/users`, {
+      method: 'POST',
+      body: JSON.stringify({ email, permissions }),
+    }),
+
+  updateSubuser: (identifier: string, uuid: string, permissions: string[]) =>
+    jsonRequest(`/api/client/servers/${encodeURIComponent(identifier)}/users/${encodeURIComponent(uuid)}`, {
+      method: 'POST',
+      body: JSON.stringify({ permissions }),
+    }),
+
+  deleteSubuser: (identifier: string, uuid: string) =>
+    rawRequest(`/api/client/servers/${encodeURIComponent(identifier)}/users/${encodeURIComponent(uuid)}`, {
+      method: 'DELETE',
+    }),
+
+  // Startup & Variables
+  getServerStartup: async (identifier: string): Promise<ServerStartupData> => {
+    const res = await jsonRequest<{ data: any[]; meta: any }>(
+      `/api/client/servers/${encodeURIComponent(identifier)}/startup`
+    );
+    const variables: StartupVariable[] = (res.data || []).map((v) => {
+      const a = v.attributes || v;
+      return {
+        name: a.name,
+        description: a.description || '',
+        envVariable: a.env_variable,
+        defaultValue: a.default_value ?? '',
+        serverValue: a.server_value ?? '',
+        isEditable: Boolean(a.is_editable),
+        rules: a.rules || '',
+      };
+    });
+    return {
+      startupCommand: res.meta?.startup_command || '',
+      rawStartupCommand: res.meta?.raw_startup_command || '',
+      dockerImages: res.meta?.docker_images || {},
+      variables,
+    };
+  },
+
+  updateStartupVariable: async (identifier: string, key: string, value: string): Promise<StartupVariable> => {
+    const res = await jsonRequest<{ attributes: any }>(
+      `/api/client/servers/${encodeURIComponent(identifier)}/startup/variable`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ key, value }),
+      }
+    );
+    const a = res.attributes || res;
+    return {
+      name: a.name,
+      description: a.description || '',
+      envVariable: a.env_variable,
+      defaultValue: a.default_value ?? '',
+      serverValue: a.server_value ?? '',
+      isEditable: Boolean(a.is_editable),
+      rules: a.rules || '',
+    };
+  },
+
+  updateDockerImage: (identifier: string, dockerImage: string) =>
+    rawRequest(`/api/client/servers/${encodeURIComponent(identifier)}/settings/docker-image`, {
+      method: 'PUT',
+      body: JSON.stringify({ docker_image: dockerImage }),
+    }),
+
+  // Server Settings & Activity
+  renameServer: (identifier: string, name: string, description: string) =>
+    rawRequest(`/api/client/servers/${encodeURIComponent(identifier)}/settings/rename`, {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    }),
+
+  reinstallServer: (identifier: string) =>
+    rawRequest(`/api/client/servers/${encodeURIComponent(identifier)}/settings/reinstall`, {
+      method: 'POST',
+    }),
+
+  getServerActivity: async (identifier: string): Promise<ActivityLogEntry[]> => {
+    const res = await jsonRequest<{ data: any[] }>(
+      `/api/client/servers/${encodeURIComponent(identifier)}/activity?include=actor`
+    );
+    return (res.data || []).map((item) => {
+      const a = item.attributes || item;
+      const actorAttr = a.relationships?.actor?.attributes;
+      return {
+        id: a.id || String(Math.random()),
+        event: a.event,
+        actor: actorAttr?.username || actorAttr?.email || (a.actor_id ? `User #${a.actor_id}` : 'System'),
+        target:
+          a.properties?.file ||
+          a.properties?.directory ||
+          a.properties?.name ||
+          a.properties?.email ||
+          a.properties?.key ||
+          a.event,
+        timestamp: a.timestamp,
+        ip: a.ip || '',
+        category: a.event?.startsWith('server:backup')
+          ? 'backup'
+          : a.event?.startsWith('server:file')
+            ? 'file'
+            : a.event?.startsWith('server:power') || a.event?.startsWith('server:console')
+              ? 'power'
+              : a.event?.startsWith('server:database')
+                ? 'database'
+                : 'admin',
+        properties: a.properties || {},
+      };
+    });
+  },
 
   // Application (Admin) API
   getAdminOverview: async () => {

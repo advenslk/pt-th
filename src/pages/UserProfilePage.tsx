@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Copy, Key, Lock, ShieldCheck, Trash2 } from 'lucide-react';
+import { Copy, Key, Lock, ShieldCheck, Terminal, Trash2 } from 'lucide-react';
 import { panelApi } from '../api/client';
 import { usePanel } from '../context/PanelContext';
-import type { ActivityLogEntry, ApiKeyEntry } from '../types/panel';
+import type { ActivityLogEntry, ApiKeyEntry, SshKeyEntry } from '../types/panel';
 import { formatRelativeTime } from '../utils/format';
 import { PanelConnectionNotice } from '../components/ui/PanelConnectionNotice';
 import defaultAvatar from '../assets/images/avatar_midnightx_user_1795748243919.jpg';
@@ -10,6 +10,7 @@ import defaultAvatar from '../assets/images/avatar_midnightx_user_1795748243919.
 export function UserProfilePage() {
   const { user, refreshData, notify, panelConnected, connectionError } = usePanel();
   const [apiKeys, setApiKeys] = useState<ApiKeyEntry[]>([]);
+  const [sshKeys, setSshKeys] = useState<SshKeyEntry[]>([]);
   const [activity, setActivity] = useState<ActivityLogEntry[]>([]);
 
   const [email, setEmail] = useState(user?.email || '');
@@ -26,14 +27,19 @@ export function UserProfilePage() {
   const [keyIps, setKeyIps] = useState('');
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
 
+  const [sshName, setSshName] = useState('');
+  const [sshPublicKey, setSshPublicKey] = useState('');
+
   const loadAccountExtras = useCallback(async () => {
     if (!panelConnected) return;
     try {
-      const [keys, act] = await Promise.all([
+      const [keys, ssh, act] = await Promise.all([
         panelApi.getApiKeys(),
+        panelApi.getSshKeys().catch(() => []),
         panelApi.getAccountActivity().catch(() => []),
       ]);
       setApiKeys(keys);
+      setSshKeys(ssh);
       setActivity(act);
     } catch (err: any) {
       notify('Could not load account details', err.message, 'error');
@@ -134,6 +140,29 @@ export function UserProfilePage() {
       notify('API key revoked', id, 'success');
     } catch (err: any) {
       notify('Could not revoke key', err.message, 'error');
+    }
+  };
+
+  const handleCreateSshKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await panelApi.createSshKey(sshName.trim(), sshPublicKey.trim());
+      setSshName('');
+      setSshPublicKey('');
+      loadAccountExtras();
+      notify('SSH key added', undefined, 'success');
+    } catch (err: any) {
+      notify('Failed to add SSH key', err.message, 'error');
+    }
+  };
+
+  const handleDeleteSshKey = async (fingerprint: string) => {
+    try {
+      await panelApi.deleteSshKey(fingerprint);
+      loadAccountExtras();
+      notify('SSH key removed', undefined, 'success');
+    } catch (err: any) {
+      notify('Could not remove SSH key', err.message, 'error');
     }
   };
 
@@ -397,6 +426,68 @@ export function UserProfilePage() {
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Revoke
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      {/* Account SSH Keys */}
+      <section className="mx-card-3d p-5 sm:p-6 rounded-2xl space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-[#171717] dark:text-white flex items-center gap-2">
+            <Terminal className="w-4 h-4 text-[#8B5CF6]" />
+            SSH Keys
+          </h2>
+          <p className="text-xs text-[#777777] dark:text-zinc-400">
+            Configure SSH public keys for SFTP authentication across your servers
+          </p>
+        </div>
+
+        <form onSubmit={handleCreateSshKey} className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+            <input
+              type="text"
+              value={sshName}
+              onChange={(e) => setSshName(e.target.value)}
+              placeholder="SSH Key Name (e.g. Workstation)"
+              required
+              className="mx-input-3d md:col-span-4 px-3 py-2 text-xs rounded-xl"
+            />
+            <input
+              type="text"
+              value={sshPublicKey}
+              onChange={(e) => setSshPublicKey(e.target.value)}
+              placeholder="ssh-ed25519 AAAA..."
+              required
+              className="mx-input-3d md:col-span-6 px-3 py-2 text-xs font-mono rounded-xl"
+            />
+            <button type="submit" className="mx-btn-3d-primary md:col-span-2 px-4 py-2 rounded-xl text-xs font-medium cursor-pointer">
+              Add SSH Key
+            </button>
+          </div>
+        </form>
+
+        <div className="divide-y divide-black/[0.05] dark:divide-white/[0.05]">
+          {sshKeys.length === 0 ? (
+            <div className="py-4 text-xs text-[#777777]">No SSH keys added yet.</div>
+          ) : (
+            sshKeys.map((k) => (
+              <div key={k.fingerprint} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="min-w-0">
+                  <div className="font-medium text-[#171717] dark:text-white">{k.name}</div>
+                  <div className="font-mono text-[11px] text-[#777777] dark:text-zinc-400 mt-0.5 truncate">
+                    SHA256:{k.fingerprint} · Added {formatRelativeTime(k.createdAt)}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteSshKey(k.fingerprint)}
+                  className="mx-btn-3d inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-rose-500 self-start sm:self-auto cursor-pointer shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete
                 </button>
               </div>
             ))

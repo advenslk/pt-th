@@ -134,4 +134,5 @@ cd /var/www/pterodactyl && php artisan view:clear && php artisan route:clear && 
 
 ### Full server management
 
-MidnightX does not implement schedules, startup variables, sub-users, or server settings yet. Use the **Classic Tools** button in the server sub-navigation (or `?classic=1` on any URL) to open the original Pterodactyl frontend — all features stay available. The **Admin Panel** sidebar link opens `/admin` in a new tab.
+MidnightX natively implements the complete Pterodactyl Panel v1.15.2 client experience: Console, File Manager, Databases, Schedules & Tasks, Sub-Users & Permissions, Backups, Network Allocations, Startup & Docker Images, Server Settings & SFTP, Server Activity Logs, and Account Security (2FA, API Keys, SSH Keys). The **Admin Panel** sidebar link opens `/admin` in a new tab.
+

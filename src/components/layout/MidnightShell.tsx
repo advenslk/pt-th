@@ -1,29 +1,35 @@
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
+  Activity,
   Archive,
+  CalendarClock,
   ChevronDown,
   ChevronRight,
   CreditCard,
   Database,
   Folder,
   FolderOpen,
-  Globe,
   Home,
   LifeBuoy,
+  LogOut,
   Menu,
   Moon,
   Network,
+  Play,
   Plus,
   Search,
   Server,
   Settings,
   Shield,
+  SlidersHorizontal,
   Sun,
   TerminalSquare,
   User,
+  Users,
   X,
 } from 'lucide-react';
+import { panelApi } from '../../api/client';
 import { usePanel, type MainRoute } from '../../context/PanelContext';
 import { LanguageSelector } from '../ui/LanguageSelector';
 import { StatusText } from '../ui/StatusText';
@@ -103,6 +109,16 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
         return ['Servers', activeServer?.name || route.serverId, 'Databases'];
       case 'server-network':
         return ['Servers', activeServer?.name || route.serverId, 'Network'];
+      case 'server-schedules':
+        return ['Servers', activeServer?.name || route.serverId, 'Schedules'];
+      case 'server-users':
+        return ['Servers', activeServer?.name || route.serverId, 'Sub-Users'];
+      case 'server-startup':
+        return ['Servers', activeServer?.name || route.serverId, 'Startup'];
+      case 'server-settings':
+        return ['Servers', activeServer?.name || route.serverId, 'Settings'];
+      case 'server-activity':
+        return ['Servers', activeServer?.name || route.serverId, 'Activity'];
       case 'account':
         return ['MidnightX', 'Account Security'];
       case 'billing':
@@ -265,6 +281,19 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               <Shield className="w-3.5 h-3.5 text-[#06B6D4]" />
               Administration
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAccountMenuOpen(false);
+                panelApi.logout().catch(() => {}).finally(() => {
+                  window.location.href = '/auth/login';
+                });
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              {t('nav.logout')}
+            </button>
           </div>
         )}
       </div>
@@ -348,6 +377,56 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
                   : navigate({ page: 'servers' })
               }
             />
+            <NavRow
+              label={t('nav.schedules')}
+              icon={CalendarClock}
+              active={route.page === 'server-schedules'}
+              onClick={() =>
+                targetServerId
+                  ? navigate({ page: 'server-schedules', serverId: targetServerId })
+                  : navigate({ page: 'servers' })
+              }
+            />
+            <NavRow
+              label={t('nav.users')}
+              icon={Users}
+              active={route.page === 'server-users'}
+              onClick={() =>
+                targetServerId
+                  ? navigate({ page: 'server-users', serverId: targetServerId })
+                  : navigate({ page: 'servers' })
+              }
+            />
+            <NavRow
+              label={t('nav.startup')}
+              icon={Play}
+              active={route.page === 'server-startup'}
+              onClick={() =>
+                targetServerId
+                  ? navigate({ page: 'server-startup', serverId: targetServerId })
+                  : navigate({ page: 'servers' })
+              }
+            />
+            <NavRow
+              label={t('nav.serverSettings')}
+              icon={SlidersHorizontal}
+              active={route.page === 'server-settings'}
+              onClick={() =>
+                targetServerId
+                  ? navigate({ page: 'server-settings', serverId: targetServerId })
+                  : navigate({ page: 'servers' })
+              }
+            />
+            <NavRow
+              label={t('nav.activity')}
+              icon={Activity}
+              active={route.page === 'server-activity'}
+              onClick={() =>
+                targetServerId
+                  ? navigate({ page: 'server-activity', serverId: targetServerId })
+                  : navigate({ page: 'servers' })
+              }
+            />
           </div>
         </div>
 
@@ -373,12 +452,6 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               icon={Settings}
               active={route.page === 'account'}
               onClick={() => navigate({ page: 'account' })}
-            />
-            <NavRow
-              label={t('nav.classicPanel')}
-              icon={Globe}
-              active={false}
-              onClick={() => window.open('/?classic=1', '_blank', 'noopener,noreferrer')}
             />
             {(!user || user.role === 'admin') && (
               <NavRow

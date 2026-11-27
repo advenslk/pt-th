@@ -30,6 +30,17 @@ export interface AllocationEntry {
   nodeId?: number;
 }
 
+export interface SftpDetails {
+  ip: string;
+  port: number;
+}
+
+export interface FeatureLimits {
+  databases: number;
+  allocations: number;
+  backups: number;
+}
+
 export interface PterodactylServer {
   id: string;
   uuid: string;
@@ -43,6 +54,8 @@ export interface PterodactylServer {
   status: ServerStatus;
   isFavorite: boolean;
   limits: ServerLimits;
+  featureLimits: FeatureLimits;
+  sftpDetails: SftpDetails;
   resources: ServerResources;
   allocations: AllocationEntry[];
   startupCommand: string;
@@ -50,6 +63,85 @@ export interface PterodactylServer {
   createdAt: string;
   renewalDate: string;
   ownerId: number;
+  isServerOwner: boolean;
+  userPermissions: string[];
+}
+
+export interface ScheduleCron {
+  dayOfWeek: string;
+  dayOfMonth: string;
+  month: string;
+  hour: string;
+  minute: string;
+}
+
+export type ScheduleTaskAction = 'command' | 'power' | 'backup';
+
+export interface ScheduleTask {
+  id: number;
+  sequenceId: number;
+  action: ScheduleTaskAction;
+  payload: string;
+  timeOffset: number;
+  isQueued: boolean;
+  continueOnFailure: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServerSchedule {
+  id: number;
+  name: string;
+  cron: ScheduleCron;
+  isActive: boolean;
+  isProcessing: boolean;
+  onlyWhenOnline: boolean;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  tasks: ScheduleTask[];
+}
+
+export interface ServerSubuser {
+  uuid: string;
+  username: string;
+  email: string;
+  image: string;
+  twoFactorEnabled: boolean;
+  createdAt: string;
+  permissions: string[];
+}
+
+export interface PermissionGroupDefinition {
+  description: string;
+  keys: Record<string, string>;
+}
+
+export type PermissionGroupMap = Record<string, PermissionGroupDefinition>;
+
+export interface StartupVariable {
+  name: string;
+  description: string;
+  envVariable: string;
+  defaultValue: string;
+  serverValue: string;
+  isEditable: boolean;
+  rules: string;
+}
+
+export interface ServerStartupData {
+  startupCommand: string;
+  rawStartupCommand: string;
+  dockerImages: Record<string, string>;
+  variables: StartupVariable[];
+}
+
+export interface SshKeyEntry {
+  name: string;
+  fingerprint: string;
+  publicKey: string;
+  createdAt: string;
 }
 
 export interface FileEntry {
@@ -144,6 +236,7 @@ export interface ActivityLogEntry {
   timestamp: string;
   ip: string;
   category: 'power' | 'file' | 'backup' | 'database' | 'auth' | 'admin' | 'billing';
+  properties?: Record<string, unknown>;
 }
 
 export interface AdminNode {
