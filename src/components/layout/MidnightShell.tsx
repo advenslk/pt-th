@@ -71,7 +71,11 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
     Infrastructure: true,
   });
 
-  const targetServerId = activeServer?.id || servers[0]?.id || '';
+  const isManagingServer = route.page.startsWith('server-');
+  const targetServerId =
+    isManagingServer && 'serverId' in route
+      ? route.serverId
+      : activeServer?.id || servers[0]?.id || '';
 
   const onlineCount = servers.filter((s) => s.status === 'running').length;
 
@@ -319,116 +323,87 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               count={servers.length}
               onClick={() => navigate({ page: 'servers' })}
             />
-            <NavRow
-              label={t('nav.console')}
-              icon={TerminalSquare}
-              active={route.page === 'server-console'}
-              onClick={() =>
-                targetServerId
-                  ? navigate({ page: 'server-console', serverId: targetServerId })
-                  : navigate({ page: 'servers' })
-              }
-            />
-            <NavRow
-              label={t('nav.files')}
-              icon={FolderOpen}
-              active={route.page === 'server-files'}
-              onClick={() =>
-                targetServerId
-                  ? navigate({ page: 'server-files', serverId: targetServerId })
-                  : navigate({ page: 'servers' })
-              }
-            />
+            {isManagingServer && targetServerId && (
+              <>
+                <NavRow
+                  label={t('nav.console')}
+                  icon={TerminalSquare}
+                  active={route.page === 'server-console'}
+                  onClick={() => navigate({ page: 'server-console', serverId: targetServerId })}
+                />
+                <NavRow
+                  label={t('nav.files')}
+                  icon={FolderOpen}
+                  active={route.page === 'server-files'}
+                  onClick={() => navigate({ page: 'server-files', serverId: targetServerId })}
+                />
+              </>
+            )}
           </div>
         </div>
 
-        <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
-          <div className="px-2 mb-1.5 text-[11px] font-medium text-[#777777] dark:text-zinc-500">
-            {t('nav.resources')}
+        {isManagingServer && targetServerId && (
+          <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
+            <div className="px-2 mb-1.5 flex items-center justify-between gap-2 text-[11px] font-medium text-[#777777] dark:text-zinc-500">
+              <span>{t('nav.resources')}</span>
+              {activeServer && (
+                <span className="truncate max-w-[120px] text-[10px] text-[#8B5CF6] dark:text-violet-400 font-semibold">
+                  {activeServer.name}
+                </span>
+              )}
+            </div>
+            <div className="space-y-1">
+              <NavRow
+                label={t('nav.backups')}
+                icon={Archive}
+                active={route.page === 'server-backups'}
+                onClick={() => navigate({ page: 'server-backups', serverId: targetServerId })}
+              />
+              <NavRow
+                label={t('nav.databases')}
+                icon={Database}
+                active={route.page === 'server-databases'}
+                onClick={() => navigate({ page: 'server-databases', serverId: targetServerId })}
+              />
+              <NavRow
+                label={t('nav.network')}
+                icon={Network}
+                active={route.page === 'server-network'}
+                onClick={() => navigate({ page: 'server-network', serverId: targetServerId })}
+              />
+              <NavRow
+                label={t('nav.schedules')}
+                icon={CalendarClock}
+                active={route.page === 'server-schedules'}
+                onClick={() => navigate({ page: 'server-schedules', serverId: targetServerId })}
+              />
+              <NavRow
+                label={t('nav.users')}
+                icon={Users}
+                active={route.page === 'server-users'}
+                onClick={() => navigate({ page: 'server-users', serverId: targetServerId })}
+              />
+              <NavRow
+                label={t('nav.startup')}
+                icon={Play}
+                active={route.page === 'server-startup'}
+                onClick={() => navigate({ page: 'server-startup', serverId: targetServerId })}
+              />
+              <NavRow
+                label={t('nav.serverSettings')}
+                icon={SlidersHorizontal}
+                active={route.page === 'server-settings'}
+                onClick={() => navigate({ page: 'server-settings', serverId: targetServerId })}
+              />
+              <NavRow
+                label={t('nav.activity')}
+                icon={Activity}
+                active={route.page === 'server-activity'}
+                onClick={() => navigate({ page: 'server-activity', serverId: targetServerId })}
+              />
+            </div>
           </div>
-          <div className="space-y-1">
-            <NavRow
-              label={t('nav.backups')}
-              icon={Archive}
-              active={route.page === 'server-backups'}
-              onClick={() =>
-                targetServerId
-                  ? navigate({ page: 'server-backups', serverId: targetServerId })
-                  : navigate({ page: 'servers' })
-              }
-            />
-            <NavRow
-              label={t('nav.databases')}
-              icon={Database}
-              active={route.page === 'server-databases'}
-              onClick={() =>
-                targetServerId
-                  ? navigate({ page: 'server-databases', serverId: targetServerId })
-                  : navigate({ page: 'servers' })
-              }
-            />
-            <NavRow
-              label={t('nav.network')}
-              icon={Network}
-              active={route.page === 'server-network'}
-              onClick={() =>
-                targetServerId
-                  ? navigate({ page: 'server-network', serverId: targetServerId })
-                  : navigate({ page: 'servers' })
-              }
-            />
-            <NavRow
-              label={t('nav.schedules')}
-              icon={CalendarClock}
-              active={route.page === 'server-schedules'}
-              onClick={() =>
-                targetServerId
-                  ? navigate({ page: 'server-schedules', serverId: targetServerId })
-                  : navigate({ page: 'servers' })
-              }
-            />
-            <NavRow
-              label={t('nav.users')}
-              icon={Users}
-              active={route.page === 'server-users'}
-              onClick={() =>
-                targetServerId
-                  ? navigate({ page: 'server-users', serverId: targetServerId })
-                  : navigate({ page: 'servers' })
-              }
-            />
-            <NavRow
-              label={t('nav.startup')}
-              icon={Play}
-              active={route.page === 'server-startup'}
-              onClick={() =>
-                targetServerId
-                  ? navigate({ page: 'server-startup', serverId: targetServerId })
-                  : navigate({ page: 'servers' })
-              }
-            />
-            <NavRow
-              label={t('nav.serverSettings')}
-              icon={SlidersHorizontal}
-              active={route.page === 'server-settings'}
-              onClick={() =>
-                targetServerId
-                  ? navigate({ page: 'server-settings', serverId: targetServerId })
-                  : navigate({ page: 'servers' })
-              }
-            />
-            <NavRow
-              label={t('nav.activity')}
-              icon={Activity}
-              active={route.page === 'server-activity'}
-              onClick={() =>
-                targetServerId
-                  ? navigate({ page: 'server-activity', serverId: targetServerId })
-                  : navigate({ page: 'servers' })
-              }
-            />
-          </div>
-        </div>
+        )}
 
         <div className="pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
           <div className="px-2 mb-1.5 text-[11px] font-medium text-[#777777] dark:text-zinc-500">
