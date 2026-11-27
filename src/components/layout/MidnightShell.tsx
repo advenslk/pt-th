@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Archive,
   ChevronDown,
@@ -13,8 +14,6 @@ import {
   Menu,
   Moon,
   Network,
-  PanelLeftClose,
-  PanelLeftOpen,
   Plus,
   Search,
   Server,
@@ -196,11 +195,12 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
           </button>
           <button
             type="button"
-            onClick={() => setSidebarCollapsed((c) => !c)}
-            title="Collapse Navigation Drawer"
-            className="mx-btn-3d hidden lg:inline-flex p-1.5 rounded-lg cursor-pointer"
+            onClick={() => setSidebarCollapsed(true)}
+            title="Hide Sidebar"
+            aria-label="Hide Sidebar"
+            className="mx-btn-3d hidden md:inline-flex p-1.5 rounded-lg cursor-pointer"
           >
-            <PanelLeftClose className="w-3.5 h-3.5" />
+            <X className="w-3.5 h-3.5" />
           </button>
           <button
             type="button"
@@ -494,35 +494,67 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen w-full bg-[#E8E8E8] dark:bg-[#101014] text-[#171717] dark:text-zinc-100 p-2 sm:p-3.5 lg:p-4 flex overflow-x-hidden transition-colors duration-200">
 
       {/* MOBILE DRAWER OVERLAY */}
-      {mobileNavOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-xs"
-            onClick={() => setMobileNavOpen(false)}
-          />
-          <div className="relative w-[280px] max-w-[84vw] h-full mx-shell-3d z-10">
-            {drawerContent}
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <div className="fixed inset-0 z-50 md:hidden flex">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-xs"
+              onClick={() => setMobileNavOpen(false)}
+            />
+            <motion.div
+              initial={{ x: -290 }}
+              animate={{ x: 0 }}
+              exit={{ x: -290 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 34 }}
+              className="relative w-[280px] max-w-[84vw] h-full mx-shell-3d z-10"
+            >
+              {drawerContent}
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* MAIN 3D DESKTOP APPLICATION WINDOW */}
-      <div className="flex-1 min-w-0 flex rounded-[26px] mx-shell-3d min-h-[calc(100vh-1rem)] sm:min-h-[calc(100vh-1.75rem)] lg:min-h-[calc(100vh-2rem)]">
-        {!sidebarCollapsed && (
-          <aside className="hidden md:flex flex-col w-[248px] lg:w-[264px] shrink-0 border-r border-black/[0.06] dark:border-white/[0.06]">
+      <div className="flex-1 min-w-0 flex rounded-[26px] mx-shell-3d min-h-[calc(100vh-1rem)] sm:min-h-[calc(100vh-1.75rem)] lg:min-h-[calc(100vh-2rem)] overflow-hidden">
+        <aside
+          aria-hidden={sidebarCollapsed}
+          className={`hidden md:flex flex-col shrink-0 overflow-hidden transition-[width,opacity] duration-200 ease-out ${
+            sidebarCollapsed
+              ? 'w-0 opacity-0 pointer-events-none border-r-0'
+              : 'w-[252px] lg:w-[264px] opacity-100 border-r border-black/[0.06] dark:border-white/[0.06]'
+          }`}
+        >
+          <div className="w-[252px] lg:w-[264px] h-full flex flex-col">
             {drawerContent}
-          </aside>
-        )}
+          </div>
+        </aside>
 
         {/* MAIN CONTENT VIEWPORT */}
         <div className="flex-1 min-w-0 flex flex-col mx-viewport-3d m-1.5 sm:m-2 rounded-[20px] overflow-hidden">
           <header className="flex items-center justify-between gap-4 px-4 sm:px-6 py-3.5 border-b border-black/[0.06] dark:border-white/[0.06] bg-white/40 dark:bg-black/15">
             <div className="flex items-center gap-2.5 min-w-0">
+              {/* Unified 3-lines sidebar toggle (mobile + desktop) */}
               <button
                 type="button"
-                onClick={() => setMobileNavOpen(true)}
-                aria-label="Open menu"
-                className="mx-btn-3d md:hidden p-2 -ml-1 rounded-lg cursor-pointer"
+                onClick={() => setMobileNavOpen((o) => !o)}
+                aria-label="Toggle navigation menu"
+                title="Open / Close Sidebar"
+                className="mx-btn-3d md:hidden w-8 h-8 rounded-xl inline-flex items-center justify-center shrink-0 cursor-pointer"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed((c) => !c)}
+                aria-label={sidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+                aria-expanded={!sidebarCollapsed}
+                title={sidebarCollapsed ? 'Open Sidebar' : 'Close Sidebar'}
+                className="mx-btn-3d hidden md:inline-flex w-8 h-8 rounded-xl items-center justify-center shrink-0 cursor-pointer"
               >
                 <Menu className="w-4 h-4" />
               </button>
@@ -530,11 +562,12 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               {sidebarCollapsed && (
                 <button
                   type="button"
-                  onClick={() => setSidebarCollapsed(false)}
-                  title="Expand Navigation Drawer"
-                  className="mx-btn-3d hidden md:inline-flex p-1.5 rounded-lg cursor-pointer"
+                  onClick={() => navigate({ page: 'dashboard' })}
+                  className="hidden md:flex items-center gap-1.5 pr-1.5 cursor-pointer shrink-0"
                 >
-                  <PanelLeftOpen className="w-4 h-4" />
+                  <span className="w-6 h-6 rounded-lg mx-rail-track text-white flex items-center justify-center shadow-sm">
+                    <MidnightStarLogo className="w-3.5 h-3.5" />
+                  </span>
                 </button>
               )}
 
