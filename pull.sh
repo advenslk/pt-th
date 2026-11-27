@@ -11,9 +11,9 @@ echo "==> Pulling origin/$BRANCH"
 git pull origin "$BRANCH"
 
 echo "==> Deploying pulled changes"
-"$REPO_DIR/deploy.sh"
+bash "$REPO_DIR/deploy.sh"
 
 echo "==> Restarting panel services"
-"$REPO_DIR/restart.sh"
+bash "$REPO_DIR/restart.sh"
 
 echo "==> Up to date: $(git rev-parse --short HEAD)"
