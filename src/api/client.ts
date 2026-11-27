@@ -971,7 +971,7 @@ export const panelApi = {
     const dbHosts: AdminDatabaseHost[] = [];
     const allocations: AllocationEntry[] = [];
     const settings: PanelSettings = {
-      panelName: 'MidnightX',
+      panelName: 'HelzerX',
       supportEmail: '',
       registrationEnabled: false,
       defaultTheme: 'light',

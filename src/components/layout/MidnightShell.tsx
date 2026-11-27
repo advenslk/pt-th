@@ -38,13 +38,13 @@ import { LanguageSelector } from '../ui/LanguageSelector';
 import { StatusText } from '../ui/StatusText';
 import defaultAvatar from '../../assets/images/avatar_midnightx_user_1795748243919.jpg';
 
-function MidnightStarLogo({ className = 'w-4 h-4' }: { className?: string }) {
+function HelzerXLogo({ className = 'w-full h-full' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <line x1="12" y1="3" x2="12" y2="21" />
-      <line x1="4.2" y1="7.5" x2="19.8" y2="16.5" />
-      <line x1="19.8" y1="7.5" x2="4.2" y2="16.5" />
-    </svg>
+    <img
+      src={`${import.meta.env.BASE_URL}assets/aistudio/IMG_20261011_201132-removebg-preview_9b5f47c8.png`}
+      alt="HelzerX"
+      className={`${className} object-contain brightness-0 invert select-none pointer-events-none`}
+    />
   );
 }
 
@@ -112,9 +112,9 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
   const breadcrumb = useMemo(() => {
     switch (route.page) {
       case 'dashboard':
-        return ['MidnightX', 'Dashboard'];
+        return ['HelzerX', 'Dashboard'];
       case 'servers':
-        return ['MidnightX', 'Servers'];
+        return ['HelzerX', 'Servers'];
       case 'server-console':
         return ['Servers', activeServer?.name || route.serverId, 'Console'];
       case 'server-files':
@@ -136,11 +136,11 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
       case 'server-activity':
         return ['Servers', activeServer?.name || route.serverId, 'Activity'];
       case 'account':
-        return ['MidnightX', 'Account Security'];
+        return ['HelzerX', 'Account Security'];
       case 'billing':
-        return ['MidnightX', 'Billing'];
+        return ['HelzerX', 'Billing'];
       case 'support':
-        return ['MidnightX', 'Support'];
+        return ['HelzerX', 'Support'];
       case 'admin':
         return ['Administration', (route.section || 'Overview').replace(/^\w/, (c) => c.toUpperCase())];
     }
@@ -211,11 +211,11 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
           onClick={() => navigate({ page: 'dashboard' })}
           className="flex items-center gap-2 cursor-pointer group"
         >
-          <span className="w-6 h-6 rounded-lg mx-rail-track text-white flex items-center justify-center shadow-sm">
-            <MidnightStarLogo className="w-3.5 h-3.5" />
+          <span className="w-7 h-6 p-1 rounded-lg mx-rail-track text-white flex items-center justify-center shadow-sm">
+            <HelzerXLogo />
           </span>
           <span className="font-display text-sm font-bold tracking-tight text-[#171717] dark:text-white">
-            MidnightX
+            HelzerX
           </span>
         </button>
         <div className="flex items-center gap-1.5">
@@ -640,8 +640,8 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
                   onClick={() => navigate({ page: 'dashboard' })}
                   className="hidden md:flex items-center gap-1.5 pr-1.5 cursor-pointer shrink-0"
                 >
-                  <span className="w-6 h-6 rounded-lg mx-rail-track text-white flex items-center justify-center shadow-sm">
-                    <MidnightStarLogo className="w-3.5 h-3.5" />
+                  <span className="w-7 h-6 p-1 rounded-lg mx-rail-track text-white flex items-center justify-center shadow-sm">
+                    <HelzerXLogo />
                   </span>
                 </button>
               )}
