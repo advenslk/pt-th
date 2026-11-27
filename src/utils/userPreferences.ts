@@ -78,9 +78,10 @@ export function loadThemeMode(): ThemeMode {
     const mode = localStorage.getItem(KEYS.themeMode);
     if (mode === 'light' || mode === 'dark' || mode === 'auto') return mode;
     const legacy = localStorage.getItem(KEYS.legacyTheme);
-    return legacy === 'dark' ? 'dark' : 'light';
+    if (legacy === 'light' || legacy === 'dark') return legacy;
+    return 'dark';
   } catch {
-    return 'light';
+    return 'dark';
   }
 }
 
