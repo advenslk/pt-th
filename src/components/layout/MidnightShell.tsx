@@ -27,23 +27,16 @@ import {
 } from 'lucide-react';
 import { usePanel, type MainRoute } from '../../context/PanelContext';
 import { StatusText } from '../ui/StatusText';
+import defaultAvatar from '../../assets/images/avatar_midnightx_user_1795748243919.jpg';
 
-function MidnightStarLogo() {
+function MidnightStarLogo({ className = 'w-4 h-4' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className="w-5 h-5 text-white drop-shadow" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
       <line x1="12" y1="3" x2="12" y2="21" />
       <line x1="4.2" y1="7.5" x2="19.8" y2="16.5" />
       <line x1="19.8" y1="7.5" x2="4.2" y2="16.5" />
     </svg>
   );
-}
-
-interface RailItem {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  isActive: boolean;
-  onClick: () => void;
 }
 
 export function MidnightShell({ children }: { children: React.ReactNode }) {
@@ -72,87 +65,6 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
   });
 
   const targetServerId = activeServer?.id || servers[0]?.id || '';
-
-  const railItems: RailItem[] = [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: Home,
-      isActive: route.page === 'dashboard',
-      onClick: () => navigate({ page: 'dashboard' }),
-    },
-    {
-      id: 'servers',
-      label: 'Servers',
-      icon: Server,
-      isActive: route.page === 'servers',
-      onClick: () => navigate({ page: 'servers' }),
-    },
-    {
-      id: 'console',
-      label: 'Console',
-      icon: TerminalSquare,
-      isActive: route.page === 'server-console',
-      onClick: () =>
-        targetServerId
-          ? navigate({ page: 'server-console', serverId: targetServerId })
-          : navigate({ page: 'servers' }),
-    },
-    {
-      id: 'files',
-      label: 'File Manager',
-      icon: FolderOpen,
-      isActive: route.page === 'server-files',
-      onClick: () =>
-        targetServerId
-          ? navigate({ page: 'server-files', serverId: targetServerId })
-          : navigate({ page: 'servers' }),
-    },
-    {
-      id: 'backups',
-      label: 'Backups',
-      icon: Archive,
-      isActive: route.page === 'server-backups',
-      onClick: () =>
-        targetServerId
-          ? navigate({ page: 'server-backups', serverId: targetServerId })
-          : navigate({ page: 'servers' }),
-    },
-    {
-      id: 'databases',
-      label: 'Databases',
-      icon: Database,
-      isActive: route.page === 'server-databases',
-      onClick: () =>
-        targetServerId
-          ? navigate({ page: 'server-databases', serverId: targetServerId })
-          : navigate({ page: 'servers' }),
-    },
-    {
-      id: 'network',
-      label: 'Network',
-      icon: Globe,
-      isActive: route.page === 'server-network',
-      onClick: () =>
-        targetServerId
-          ? navigate({ page: 'server-network', serverId: targetServerId })
-          : navigate({ page: 'servers' }),
-    },
-    {
-      id: 'billing',
-      label: 'Billing',
-      icon: CreditCard,
-      isActive: route.page === 'billing',
-      onClick: () => navigate({ page: 'billing' }),
-    },
-    {
-      id: 'support',
-      label: 'Support',
-      icon: LifeBuoy,
-      isActive: route.page === 'support',
-      onClick: () => navigate({ page: 'support' }),
-    },
-  ];
 
   const onlineCount = servers.filter((s) => s.status === 'running').length;
 
@@ -261,11 +173,18 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col h-full select-none">
       {/* Subtle Desktop Window Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <div className="flex items-center gap-1.5" aria-hidden="true">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#CFA09A] dark:bg-zinc-700 shadow-inner" />
-          <span className="w-2.5 h-2.5 rounded-full bg-[#D7C497] dark:bg-zinc-700 shadow-inner" />
-          <span className="w-2.5 h-2.5 rounded-full bg-[#9CC0A7] dark:bg-zinc-700 shadow-inner" />
-        </div>
+        <button
+          type="button"
+          onClick={() => navigate({ page: 'dashboard' })}
+          className="flex items-center gap-2 cursor-pointer group"
+        >
+          <span className="w-6 h-6 rounded-lg mx-rail-track text-white flex items-center justify-center shadow-sm">
+            <MidnightStarLogo className="w-3.5 h-3.5" />
+          </span>
+          <span className="font-display text-sm font-bold tracking-tight text-[#171717] dark:text-white">
+            MidnightX
+          </span>
+        </button>
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -303,7 +222,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
         >
           <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-[#171717] dark:ring-white/25 bg-[#242424] shrink-0 flex items-center justify-center shadow-[0_4px_10px_rgba(0,0,0,0.28)]">
             <img
-              src="/src/assets/images/avatar_midnightx_user_1795748243919.jpg"
+              src={defaultAvatar}
               alt={userDisplayName}
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
@@ -572,98 +491,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen w-full bg-[#E8E8E8] dark:bg-[#101014] text-[#171717] dark:text-zinc-100 p-2 sm:p-3.5 lg:p-4 flex gap-3 overflow-x-hidden transition-colors duration-200">
-      {/* LEFT NARROW VERTICAL 3D ICON RAIL */}
-      <aside
-        aria-label="Primary icon rail"
-        className="hidden md:flex flex-col items-center justify-between w-[66px] shrink-0 rounded-[24px] mx-shell-3d p-1.5 h-[calc(100vh-1.75rem)] lg:h-[calc(100vh-2rem)] sticky top-3.5 lg:top-4"
-      >
-        {/* Top Dark Vertical 3D Track */}
-        <div className="w-full rounded-[18px] mx-rail-track py-2.5 px-1.5 flex flex-col items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => navigate({ page: 'dashboard' })}
-            title="MidnightX Dashboard"
-            className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/[0.08] active:translate-y-[1px] transition-all cursor-pointer mb-1"
-          >
-            <MidnightStarLogo />
-          </button>
-
-          {railItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.id} className="relative group w-full flex justify-center">
-                <button
-                  type="button"
-                  onClick={item.onClick}
-                  aria-label={item.label}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 cursor-pointer active:translate-y-[1px] ${
-                    item.isActive
-                      ? 'mx-rail-active text-white'
-                      : 'text-zinc-400 hover:text-white hover:bg-white/[0.07]'
-                  }`}
-                >
-                  <Icon className="w-[18px] h-[18px]" />
-                </button>
-                <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 absolute left-14 top-1/2 -translate-y-1/2 z-50 px-2.5 py-1 rounded-lg bg-[#171717] dark:bg-[#24242B] text-white text-xs font-medium whitespace-nowrap shadow-xl border border-white/15">
-                  {item.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Engraved Vertical Label */}
-        <div className="hidden xl:flex items-center justify-center py-2 overflow-hidden">
-          <span
-            className="text-[9px] font-semibold tracking-[0.26em] text-[#848484] dark:text-zinc-600 uppercase whitespace-nowrap"
-            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-          >
-            MIDNIGHTX NAV
-          </span>
-        </div>
-
-        {/* Bottom Detached 3D Control Module */}
-        <div className="w-full rounded-[18px] mx-rail-track p-1.5 flex flex-col items-center gap-1.5">
-          {(!user || user.role === 'admin') && (
-            <div className="relative group w-full flex justify-center">
-              <button
-                type="button"
-                onClick={() => window.open('/admin', '_blank', 'noopener,noreferrer')}
-                aria-label="Admin Panel"
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all active:translate-y-[1px] cursor-pointer ${
-                  route.page === 'admin'
-                    ? 'mx-rail-active text-[#06B6D4]'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.07]'
-                }`}
-              >
-                <Shield className="w-[18px] h-[18px]" />
-              </button>
-              <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 absolute left-14 top-1/2 -translate-y-1/2 z-50 px-2.5 py-1 rounded-lg bg-[#171717] dark:bg-[#24242B] text-white text-xs font-medium whitespace-nowrap shadow-xl border border-white/15">
-                Admin Panel
-              </span>
-            </div>
-          )}
-
-          <div className="relative group w-full flex justify-center">
-            <button
-              type="button"
-              onClick={() => navigate({ page: 'account' })}
-              aria-label="Profile & Settings"
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all active:translate-y-[1px] cursor-pointer ${
-                route.page === 'account'
-                  ? 'mx-rail-active text-[#8B5CF6]'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.07]'
-              }`}
-            >
-              <Settings className="w-[18px] h-[18px]" />
-            </button>
-            <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 absolute left-14 top-1/2 -translate-y-1/2 z-50 px-2.5 py-1 rounded-lg bg-[#171717] dark:bg-[#24242B] text-white text-xs font-medium whitespace-nowrap shadow-xl border border-white/15">
-              Account Settings
-            </span>
-          </div>
-        </div>
-      </aside>
+    <div className="min-h-screen w-full bg-[#E8E8E8] dark:bg-[#101014] text-[#171717] dark:text-zinc-100 p-2 sm:p-3.5 lg:p-4 flex overflow-x-hidden transition-colors duration-200">
 
       {/* MOBILE DRAWER OVERLAY */}
       {mobileNavOpen && (
