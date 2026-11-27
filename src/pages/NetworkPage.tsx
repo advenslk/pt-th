@@ -96,16 +96,16 @@ export function NetworkPage({ serverId }: { serverId: string }) {
           <tbody className="divide-y divide-black/[0.05] dark:divide-white/[0.05] text-xs">
             {allocations.map((alloc) => (
               <tr key={alloc.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
-                <td className="py-3 px-4 font-mono">
-                  <div className="flex items-center gap-2 text-[#171717] dark:text-white font-medium">
+                <td className="py-3 px-4">
+                  <div className="flex items-center gap-2 text-[#171717] dark:text-white font-semibold tabular-nums">
                     <Globe className="w-3.5 h-3.5 text-[#06B6D4]" />
                     <span>{alloc.alias || alloc.ip}</span>
                   </div>
                   {alloc.alias && (
-                    <div className="text-[11px] text-[#777777] dark:text-zinc-500 pl-5">{alloc.ip}</div>
+                    <div className="text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500 pl-5">{alloc.ip}</div>
                   )}
                 </td>
-                <td className="py-3 px-3 font-mono tabular-nums font-medium">{alloc.port}</td>
+                <td className="py-3 px-3 font-display font-bold tabular-nums">{alloc.port}</td>
                 <td className="py-3 px-3 text-[#777777] dark:text-zinc-400">{alloc.notes || '—'}</td>
                 <td className="py-3 px-3">
                   {alloc.isDefault ? (

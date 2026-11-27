@@ -53,10 +53,10 @@ export function BillingPage() {
 
       <div className="mx-card-3d p-5 rounded-2xl max-w-sm">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[#777777] dark:text-zinc-400">Wallet Balance</span>
+          <span className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Wallet Balance</span>
           <Wallet className="w-4 h-4 text-[#8B5CF6]" />
         </div>
-        <div className="mt-2 text-3xl font-semibold font-mono tabular-nums">
+        <div className="mt-2 text-3xl font-bold mx-stat-3d">
           ${billing.walletBalance.toFixed(2)}
         </div>
       </div>
@@ -66,11 +66,11 @@ export function BillingPage() {
           {billing.plans.map((plan) => (
             <div key={plan.id} className="mx-card-3d p-5 rounded-2xl space-y-3">
               <div className="text-xs text-[#777777]">{plan.category}</div>
-              <h3 className="text-base font-semibold">{plan.name}</h3>
-              <div className="text-2xl font-semibold font-mono tabular-nums">
+              <h3 className="mx-heading-3d text-base font-bold">{plan.name}</h3>
+              <div className="text-2xl font-bold mx-stat-3d-violet">
                 ${plan.priceMonthly.toFixed(2)}<span className="text-xs font-sans font-normal text-[#777777]"> / mo</span>
               </div>
-              <div className="text-xs text-[#777777] font-mono">
+              <div className="text-xs font-medium tabular-nums text-[#777777]">
                 {formatMb(plan.memoryMb)} RAM · {formatMb(plan.diskMb)} Disk · {plan.cpuLimit}% CPU
               </div>
             </div>
@@ -80,15 +80,15 @@ export function BillingPage() {
 
       {billing.invoices.length > 0 && (
         <div className="mx-card-3d p-5 rounded-2xl space-y-3">
-          <h2 className="text-sm font-semibold">Invoices</h2>
+          <h2 className="mx-heading-3d text-sm font-bold">Invoices</h2>
           <div className="divide-y divide-black/[0.05] dark:divide-white/[0.05]">
             {billing.invoices.map((inv) => (
               <div key={inv.id} className="py-3 flex items-center justify-between text-xs">
                 <div>
-                  <div className="font-mono font-medium">{inv.number}</div>
+                  <div className="font-semibold">{inv.number}</div>
                   <div className="text-[#777777]">{inv.description} · Due {formatDate(inv.dueAt)}</div>
                 </div>
-                <span className="font-mono tabular-nums font-medium">${inv.amount.toFixed(2)} ({inv.status})</span>
+                <span className="font-display font-bold tabular-nums">${inv.amount.toFixed(2)} ({inv.status})</span>
               </div>
             ))}
           </div>

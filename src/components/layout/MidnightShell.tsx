@@ -146,7 +146,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
       </span>
       {count !== undefined && (
         <span
-          className={`font-mono text-[11px] tabular-nums px-1.5 py-0.5 rounded-full ${
+          className={`font-display font-semibold text-[11px] tabular-nums px-2 py-0.5 rounded-full ${
             active
               ? 'mx-well-3d text-[#171717] dark:text-zinc-100'
               : 'bg-black/[0.045] dark:bg-white/[0.05] text-[#777777] dark:text-zinc-500'
@@ -440,7 +440,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
                         <Folder className="w-3.5 h-3.5 text-[#777777] shrink-0" />
                         <span className="truncate">{groupName}</span>
                       </span>
-                      <span className="font-mono text-[10px] tabular-nums text-[#777777] dark:text-zinc-500">
+                      <span className="font-display font-semibold text-[10px] tabular-nums text-[#777777] dark:text-zinc-500">
                         {items.length}
                       </span>
                     </button>
@@ -472,7 +472,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
                                 />
                                 <span className="truncate">{srv.name}</span>
                               </span>
-                              <span className="font-mono text-[10px] tabular-nums text-[#777777] dark:text-zinc-500 shrink-0">
+                              <span className="font-display font-medium text-[10px] tabular-nums text-[#777777] dark:text-zinc-500 shrink-0">
                                 :{srv.allocations[0]?.port || '—'}
                               </span>
                             </button>

@@ -568,10 +568,10 @@ export function FileManagerPage({ serverId }: { serverId: string }) {
                         <span>{entry.name}</span>
                       </button>
                     </td>
-                    <td className="py-2.5 px-3 text-right font-mono tabular-nums text-[#777777] dark:text-zinc-400">
+                    <td className="py-2.5 px-3 text-right font-display font-medium tabular-nums text-[#777777] dark:text-zinc-400">
                       {entry.isDirectory ? '—' : formatBytes(entry.size)}
                     </td>
-                    <td className="py-2.5 px-3 text-right font-mono tabular-nums text-[#777777] dark:text-zinc-400">
+                    <td className="py-2.5 px-3 text-right font-medium tabular-nums text-[#777777] dark:text-zinc-400">
                       {formatRelativeTime(entry.modifiedAt)}
                     </td>
                     <td className="py-2.5 px-4 text-right">

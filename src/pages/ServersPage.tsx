@@ -61,7 +61,7 @@ export function ServersPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#171717] dark:text-white">
+          <h1 className="mx-heading-3d text-xl sm:text-2xl font-bold text-[#171717] dark:text-white">
             Servers
           </h1>
           <p className="text-xs sm:text-sm text-[#777777] dark:text-zinc-400 mt-0.5">
@@ -196,10 +196,10 @@ export function ServersPage() {
                         <ServerCategoryIcon category={srv.category} className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-sm font-semibold text-[#171717] dark:text-white truncate">
+                        <h3 className="mx-heading-3d text-sm font-bold text-[#171717] dark:text-white truncate">
                           {srv.name}
                         </h3>
-                        <div className="text-[11px] font-mono text-[#777777] dark:text-zinc-400 truncate">
+                        <div className="text-[11px] font-medium text-[#777777] dark:text-zinc-400 truncate">
                           {srv.identifier} · {srv.node}
                         </div>
                       </div>
@@ -230,26 +230,26 @@ export function ServersPage() {
 
                   <div className="mt-4 grid grid-cols-2 gap-2.5 text-xs">
                     <div className="mx-well-3d p-2.5 rounded-xl">
-                      <div className="text-[11px] text-[#777777] dark:text-zinc-400">CPU</div>
-                      <div className="font-mono font-medium tabular-nums text-[#171717] dark:text-zinc-100 mt-0.5">
+                      <div className="mx-label-3d text-[11px] font-medium text-[#777777] dark:text-zinc-400">CPU</div>
+                      <div className="text-sm font-bold mx-stat-3d-violet mt-0.5">
                         {srv.resources.cpuPercent.toFixed(1)}%
                       </div>
                     </div>
                     <div className="mx-well-3d p-2.5 rounded-xl">
-                      <div className="text-[11px] text-[#777777] dark:text-zinc-400">Memory ({memPct.toFixed(0)}%)</div>
-                      <div className="font-mono font-medium tabular-nums text-[#171717] dark:text-zinc-100 mt-0.5">
+                      <div className="mx-label-3d text-[11px] font-medium text-[#777777] dark:text-zinc-400">Memory ({memPct.toFixed(0)}%)</div>
+                      <div className="text-sm font-bold mx-stat-3d-cyan mt-0.5">
                         {formatBytes(srv.resources.memoryBytes)}
                       </div>
                     </div>
                     <div className="mx-well-3d p-2.5 rounded-xl">
-                      <div className="text-[11px] text-[#777777] dark:text-zinc-400">Disk ({diskPct.toFixed(0)}%)</div>
-                      <div className="font-mono font-medium tabular-nums text-[#171717] dark:text-zinc-100 mt-0.5">
+                      <div className="mx-label-3d text-[11px] font-medium text-[#777777] dark:text-zinc-400">Disk ({diskPct.toFixed(0)}%)</div>
+                      <div className="text-sm font-bold mx-stat-3d text-[#171717] dark:text-zinc-100 mt-0.5">
                         {formatBytes(srv.resources.diskBytes)}
                       </div>
                     </div>
                     <div className="mx-well-3d p-2.5 rounded-xl">
-                      <div className="text-[11px] text-[#777777] dark:text-zinc-400">Network I/O</div>
-                      <div className="font-mono font-medium tabular-nums text-[#171717] dark:text-zinc-100 mt-0.5">
+                      <div className="mx-label-3d text-[11px] font-medium text-[#777777] dark:text-zinc-400">Network I/O</div>
+                      <div className="text-sm font-bold mx-stat-3d text-[#171717] dark:text-zinc-100 mt-0.5">
                         {formatBytes(srv.resources.networkRxBytes + srv.resources.networkTxBytes)}
                       </div>
                     </div>
@@ -257,7 +257,7 @@ export function ServersPage() {
                 </div>
 
                 <div className="mt-4 pt-3.5 border-t border-black/[0.06] dark:border-white/[0.06] flex items-center justify-between gap-2">
-                  <div className="text-[11px] font-mono tabular-nums text-[#777777] dark:text-zinc-400 truncate">
+                  <div className="text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-400 truncate">
                     {srv.allocations[0]?.ip || '—'}:{srv.allocations[0]?.port || '—'} · {formatUptime(srv.resources.uptimeMs)}
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -344,7 +344,7 @@ export function ServersPage() {
                         <div className="font-semibold text-[#171717] dark:text-white group-hover:text-[#8B5CF6]">
                           {srv.name}
                         </div>
-                        <div className="font-mono text-[11px] text-[#777777] dark:text-zinc-400">
+                        <div className="text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-400">
                           {srv.allocations[0]?.ip || '—'}:{srv.allocations[0]?.port || '—'}
                         </div>
                       </div>
@@ -354,12 +354,12 @@ export function ServersPage() {
                     <StatusText status={srv.status} />
                   </td>
                   <td className="py-3 px-3 text-[#777777] dark:text-zinc-400">{srv.node}</td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums">{srv.resources.cpuPercent.toFixed(1)}%</td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums">
+                  <td className="py-3 px-3 text-right font-display font-semibold tabular-nums">{srv.resources.cpuPercent.toFixed(1)}%</td>
+                  <td className="py-3 px-3 text-right font-display font-semibold tabular-nums">
                     {formatBytes(srv.resources.memoryBytes)} / {formatMb(srv.limits.memory)}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums">{formatBytes(srv.resources.diskBytes)}</td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums text-[#777777] dark:text-zinc-400">
+                  <td className="py-3 px-3 text-right font-display font-semibold tabular-nums">{formatBytes(srv.resources.diskBytes)}</td>
+                  <td className="py-3 px-3 text-right font-medium tabular-nums text-[#777777] dark:text-zinc-400">
                     {formatUptime(srv.resources.uptimeMs)}
                   </td>
                   <td className="py-3 px-4 text-right">

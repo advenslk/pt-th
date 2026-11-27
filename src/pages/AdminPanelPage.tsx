@@ -101,21 +101,21 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5">
             <div className="mx-card-3d p-4 rounded-2xl">
-              <div className="text-xs text-[#777777] dark:text-zinc-400">Total Users</div>
-              <div className="mt-1.5 text-2xl font-semibold font-mono tabular-nums">{stats.totalUsers}</div>
+              <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Total Users</div>
+              <div className="mt-1.5 text-2xl font-bold mx-stat-3d">{stats.totalUsers}</div>
             </div>
             <div className="mx-card-3d p-4 rounded-2xl">
-              <div className="text-xs text-[#777777] dark:text-zinc-400">Total Servers</div>
-              <div className="mt-1.5 text-2xl font-semibold font-mono tabular-nums text-[#8B5CF6]">{stats.totalServers}</div>
+              <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Total Servers</div>
+              <div className="mt-1.5 text-2xl font-bold mx-stat-3d-violet">{stats.totalServers}</div>
             </div>
             <div className="mx-card-3d p-4 rounded-2xl">
-              <div className="text-xs text-[#777777] dark:text-zinc-400">Registered Nodes</div>
-              <div className="mt-1.5 text-2xl font-semibold font-mono tabular-nums text-[#06B6D4]">{stats.totalNodes}</div>
+              <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Registered Nodes</div>
+              <div className="mt-1.5 text-2xl font-bold mx-stat-3d-cyan">{stats.totalNodes}</div>
             </div>
           </div>
 
           <div className="mx-card-3d p-5 rounded-2xl space-y-3">
-            <h2 className="text-sm font-semibold">Node Capacity</h2>
+            <h2 className="mx-heading-3d text-sm font-bold">Node Capacity</h2>
             {nodes.length === 0 ? (
               <div className="text-xs text-[#777777]">No nodes returned from Application API.</div>
             ) : (
@@ -129,9 +129,9 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
                         {n.status}
                       </span>
                     </div>
-                    <div className="flex justify-between text-[11px] font-mono text-[#777777] dark:text-zinc-400">
+                    <div className="flex justify-between text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-400">
                       <span>RAM {formatMb(n.memoryAllocated)} / {formatMb(n.memoryTotal)}</span>
-                      <span>{memPct}%</span>
+                      <span className="font-display font-bold">{memPct}%</span>
                     </div>
                   </div>
                 );

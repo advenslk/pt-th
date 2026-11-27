@@ -212,11 +212,11 @@ export function BackupsPage({ serverId }: { serverId: string }) {
                       <span className="text-[#06B6D4] font-medium">In Progress</span>
                     )}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums">{formatBytes(b.bytes)}</td>
+                  <td className="py-3 px-3 text-right font-display font-semibold tabular-nums">{formatBytes(b.bytes)}</td>
                   <td className="py-3 px-3 font-mono text-[11px] text-[#777777] dark:text-zinc-400">
                     {b.sha256Hash ? `${b.sha256Hash.slice(0, 12)}…` : '—'}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums text-[#777777] dark:text-zinc-400">
+                  <td className="py-3 px-3 text-right font-medium tabular-nums text-[#777777] dark:text-zinc-400">
                     {formatDate(b.createdAt)} · {formatRelativeTime(b.createdAt)}
                   </td>
                   <td className="py-3 px-4 text-right">

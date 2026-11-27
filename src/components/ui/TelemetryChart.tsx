@@ -54,21 +54,21 @@ export function TelemetryChart({ data, height = 190 }: TelemetryChartProps) {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
         <div className="flex items-center gap-5 text-xs">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-sm bg-[#8B5CF6]" aria-hidden="true" />
-            <span className="text-[#777777] dark:text-zinc-400">CPU Load</span>
-            <span className="font-mono font-medium tabular-nums text-[#171717] dark:text-zinc-100">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[#8B5CF6] shadow-[0_1px_4px_rgba(139,92,246,0.5)]" aria-hidden="true" />
+            <span className="mx-label-3d text-[#777777] dark:text-zinc-400">CPU Load</span>
+            <span className="font-display font-bold tabular-nums text-[#171717] dark:text-zinc-100">
               {activePoint.cpu.toFixed(1)}%
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-sm bg-[#06B6D4]" aria-hidden="true" />
-            <span className="text-[#777777] dark:text-zinc-400">Memory Allocation</span>
-            <span className="font-mono font-medium tabular-nums text-[#171717] dark:text-zinc-100">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[#06B6D4] shadow-[0_1px_4px_rgba(6,182,212,0.5)]" aria-hidden="true" />
+            <span className="mx-label-3d text-[#777777] dark:text-zinc-400">Memory Allocation</span>
+            <span className="font-display font-bold tabular-nums text-[#171717] dark:text-zinc-100">
               {activePoint.memoryPercent.toFixed(1)}%
             </span>
           </div>
         </div>
-        <span className="font-mono text-[11px] tabular-nums text-[#777777] dark:text-zinc-500">
+        <span className="font-display font-medium text-[11px] tabular-nums text-[#777777] dark:text-zinc-500">
           {activePoint.time}
         </span>
       </div>
@@ -106,7 +106,7 @@ export function TelemetryChart({ data, height = 190 }: TelemetryChartProps) {
               <text
                 x={0}
                 y={y + 3}
-                className="fill-[#777777] dark:fill-zinc-500 font-mono text-[9px]"
+                className="fill-[#777777] dark:fill-zinc-500 font-display font-medium text-[9px] tabular-nums"
               >
                 {tick}%
               </text>

@@ -238,13 +238,13 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#171717] dark:text-white">
+            <h1 className="mx-heading-3d text-xl sm:text-2xl font-bold text-[#171717] dark:text-white">
               {server.name}
             </h1>
             <StatusText status={liveStatus} />
           </div>
           <p className="text-xs text-[#777777] dark:text-zinc-400 mt-1 flex flex-wrap items-center gap-2">
-            <span className="font-mono">{server.allocations[0]?.ip || '—'}:{server.allocations[0]?.port || '—'}</span>
+            <span className="font-medium tabular-nums">{server.allocations[0]?.ip || '—'}:{server.allocations[0]?.port || '—'}</span>
             <span aria-hidden="true">·</span>
             <span>{server.egg}</span>
             <span aria-hidden="true">·</span>
@@ -307,41 +307,41 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
       {/* Live Telemetry Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="mx-card-3d p-4 rounded-2xl">
-          <div className="text-xs text-[#777777] dark:text-zinc-400">Live CPU Usage</div>
-          <div className="mt-1.5 text-xl font-semibold font-mono tabular-nums text-[#8B5CF6]">
+          <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Live CPU Usage</div>
+          <div className="mt-1.5 text-xl font-bold mx-stat-3d-violet">
             {resources.cpuPercent.toFixed(1)}%
           </div>
-          <div className="mt-0.5 text-[11px] font-mono text-[#777777] dark:text-zinc-500">
+          <div className="mt-0.5 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
             Limit: {server.limits.cpu || '∞'}%
           </div>
         </div>
 
         <div className="mx-card-3d p-4 rounded-2xl">
-          <div className="text-xs text-[#777777] dark:text-zinc-400">Live RAM Usage</div>
-          <div className="mt-1.5 text-xl font-semibold font-mono tabular-nums text-[#06B6D4]">
+          <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Live RAM Usage</div>
+          <div className="mt-1.5 text-xl font-bold mx-stat-3d-cyan">
             {formatBytes(resources.memoryBytes)}
           </div>
-          <div className="mt-0.5 text-[11px] font-mono text-[#777777] dark:text-zinc-500">
+          <div className="mt-0.5 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
             {memPct.toFixed(1)}% of {formatMb(server.limits.memory)}
           </div>
         </div>
 
         <div className="mx-card-3d p-4 rounded-2xl">
-          <div className="text-xs text-[#777777] dark:text-zinc-400">Network Traffic</div>
-          <div className="mt-1.5 text-xl font-semibold font-mono tabular-nums text-[#171717] dark:text-white">
+          <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Network Traffic</div>
+          <div className="mt-1.5 text-xl font-bold mx-stat-3d text-[#171717] dark:text-white">
             {networkKbps.toFixed(1)} KB/s
           </div>
-          <div className="mt-0.5 text-[11px] font-mono text-[#777777] dark:text-zinc-500">
+          <div className="mt-0.5 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
             RX {formatBytes(resources.networkRxBytes)} · TX {formatBytes(resources.networkTxBytes)}
           </div>
         </div>
 
         <div className="mx-card-3d p-4 rounded-2xl">
-          <div className="text-xs text-[#777777] dark:text-zinc-400">Uptime</div>
-          <div className="mt-1.5 text-xl font-semibold font-mono tabular-nums text-[#171717] dark:text-white">
+          <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Uptime</div>
+          <div className="mt-1.5 text-xl font-bold mx-stat-3d text-[#171717] dark:text-white">
             {formatUptime(resources.uptimeMs)}
           </div>
-          <div className="mt-0.5 text-[11px] font-mono text-[#777777] dark:text-zinc-500">
+          <div className="mt-0.5 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
             Disk: {formatBytes(resources.diskBytes)}
           </div>
         </div>

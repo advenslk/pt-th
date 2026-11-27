@@ -104,7 +104,7 @@ export function DashboardPage() {
             />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#171717] dark:text-white truncate">
+            <h1 className="mx-heading-3d text-xl sm:text-2xl font-bold text-[#171717] dark:text-white truncate">
               Welcome back, {displayName}
             </h1>
             <p className="text-xs sm:text-sm text-[#777777] dark:text-zinc-400 flex flex-wrap items-center gap-2 mt-0.5">
@@ -170,55 +170,55 @@ export function DashboardPage() {
       <section aria-label="Infrastructure summary">
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3.5">
           <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="text-xs text-[#777777] dark:text-zinc-400">Total Servers</div>
-            <div className="mt-2 text-2xl font-semibold font-mono tabular-nums text-[#171717] dark:text-white">
+            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Total Servers</div>
+            <div className="mt-2 text-2xl font-bold mx-stat-3d text-[#171717] dark:text-white">
               {stats.total}
             </div>
-            <div className="mt-1 text-[11px] text-[#777777] dark:text-zinc-500">Assigned instances</div>
+            <div className="mt-1 text-[11px] font-medium text-[#777777] dark:text-zinc-500">Assigned instances</div>
           </div>
 
           <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="text-xs text-[#777777] dark:text-zinc-400">Online Servers</div>
-            <div className="mt-2 text-2xl font-semibold font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
+            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Online Servers</div>
+            <div className="mt-2 text-2xl font-bold mx-stat-3d-emerald">
               {stats.online}
             </div>
-            <div className="mt-1 text-[11px] text-[#777777] dark:text-zinc-500">Running containers</div>
+            <div className="mt-1 text-[11px] font-medium text-[#777777] dark:text-zinc-500">Running containers</div>
           </div>
 
           <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="text-xs text-[#777777] dark:text-zinc-400">Offline Servers</div>
-            <div className="mt-2 text-2xl font-semibold font-mono tabular-nums text-[#171717] dark:text-zinc-200">
+            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Offline Servers</div>
+            <div className="mt-2 text-2xl font-bold mx-stat-3d text-[#171717] dark:text-zinc-200">
               {stats.offline}
             </div>
-            <div className="mt-1 text-[11px] text-[#777777] dark:text-zinc-500">Stopped containers</div>
+            <div className="mt-1 text-[11px] font-medium text-[#777777] dark:text-zinc-500">Stopped containers</div>
           </div>
 
           <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="text-xs text-[#777777] dark:text-zinc-400">CPU Usage</div>
-            <div className="mt-2 text-2xl font-semibold font-mono tabular-nums text-[#8B5CF6]">
+            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">CPU Usage</div>
+            <div className="mt-2 text-2xl font-bold mx-stat-3d-violet">
               {stats.avgCpuPercent.toFixed(1)}%
             </div>
-            <div className="mt-1 text-[11px] font-mono tabular-nums text-[#777777] dark:text-zinc-500">
+            <div className="mt-1 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
               {stats.usedCpu.toFixed(1)}% aggregate
             </div>
           </div>
 
           <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="text-xs text-[#777777] dark:text-zinc-400">RAM Usage</div>
-            <div className="mt-2 text-2xl font-semibold font-mono tabular-nums text-[#06B6D4]">
+            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">RAM Usage</div>
+            <div className="mt-2 text-2xl font-bold mx-stat-3d-cyan">
               {stats.memPercent.toFixed(1)}%
             </div>
-            <div className="mt-1 text-[11px] font-mono tabular-nums text-[#777777] dark:text-zinc-500">
+            <div className="mt-1 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
               {formatBytes(stats.usedMemBytes)} / {servers.length > 0 ? formatBytes(stats.totalMemBytes, 0) : '0 B'}
             </div>
           </div>
 
           <div className="mx-card-3d p-4 rounded-2xl">
-            <div className="text-xs text-[#777777] dark:text-zinc-400">Disk Usage</div>
-            <div className="mt-2 text-2xl font-semibold font-mono tabular-nums text-[#171717] dark:text-white">
+            <div className="mx-label-3d text-xs font-medium text-[#6B6B6B] dark:text-zinc-400">Disk Usage</div>
+            <div className="mt-2 text-2xl font-bold mx-stat-3d text-[#171717] dark:text-white">
               {stats.diskPercent.toFixed(1)}%
             </div>
-            <div className="mt-1 text-[11px] font-mono tabular-nums text-[#777777] dark:text-zinc-500">
+            <div className="mt-1 text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500">
               {formatBytes(stats.usedDiskBytes)} / {servers.length > 0 ? formatBytes(stats.totalDiskBytes, 0) : '0 B'}
             </div>
           </div>
@@ -230,7 +230,7 @@ export function DashboardPage() {
         <section className="xl:col-span-8 mx-card-3d p-5 sm:p-6 rounded-2xl flex flex-col justify-between">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
-              <h2 className="text-base font-semibold text-[#171717] dark:text-white">
+              <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
                 Cluster Resource Telemetry
               </h2>
               <p className="text-xs text-[#777777] dark:text-zinc-400 mt-0.5">
@@ -250,7 +250,7 @@ export function DashboardPage() {
 
         <section className="xl:col-span-4 mx-card-3d p-5 sm:p-6 rounded-2xl flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-[#171717] dark:text-white">
+            <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
               Recent Activity
             </h2>
             <button
@@ -277,7 +277,7 @@ export function DashboardPage() {
                       {log.target} · {log.ip}
                     </div>
                   </div>
-                  <span className="font-mono text-[11px] tabular-nums text-[#777777] dark:text-zinc-500 whitespace-nowrap shrink-0">
+                  <span className="text-[11px] font-medium tabular-nums text-[#777777] dark:text-zinc-500 whitespace-nowrap shrink-0">
                     {formatRelativeTime(log.timestamp)}
                   </span>
                 </div>
@@ -291,7 +291,7 @@ export function DashboardPage() {
       <section aria-label="Server Overview">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-base font-semibold text-[#171717] dark:text-white">
+            <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
               Server Overview
             </h2>
             <p className="text-xs text-[#777777] dark:text-zinc-400 mt-0.5">
@@ -335,7 +335,7 @@ export function DashboardPage() {
                         <ServerCategoryIcon category={srv.category} className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-sm font-semibold text-[#171717] dark:text-white truncate">
+                        <h3 className="mx-heading-3d text-sm font-bold text-[#171717] dark:text-white truncate">
                           {srv.name}
                         </h3>
                         <div className="text-[11px] text-[#777777] dark:text-zinc-400 truncate">
@@ -349,46 +349,46 @@ export function DashboardPage() {
                   <div className="mt-4 pt-4 border-t border-black/[0.05] dark:border-white/[0.06] space-y-2.5">
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">
-                        <span className="text-[#777777] dark:text-zinc-400">CPU</span>
-                        <span className="font-mono tabular-nums text-[#171717] dark:text-zinc-200">
+                        <span className="mx-label-3d font-medium text-[#777777] dark:text-zinc-400">CPU</span>
+                        <span className="font-display font-semibold tabular-nums text-[#171717] dark:text-zinc-200">
                           {srv.resources.cpuPercent.toFixed(1)}% / {srv.limits.cpu || '∞'}%
                         </span>
                       </div>
-                      <div className="mx-well-3d h-2 rounded-full overflow-hidden p-[1px]">
-                        <div className="h-full rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA] transition-all duration-300" style={{ width: `${cpuPct}%` }} />
+                      <div className="mx-well-3d h-2.5 rounded-full overflow-hidden p-[1.5px]">
+                        <div className="mx-meter-violet h-full rounded-full transition-all duration-300" style={{ width: `${cpuPct}%` }} />
                       </div>
                     </div>
 
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">
-                        <span className="text-[#777777] dark:text-zinc-400">Memory</span>
-                        <span className="font-mono tabular-nums text-[#171717] dark:text-zinc-200">
+                        <span className="mx-label-3d font-medium text-[#777777] dark:text-zinc-400">Memory</span>
+                        <span className="font-display font-semibold tabular-nums text-[#171717] dark:text-zinc-200">
                           {formatBytes(srv.resources.memoryBytes)} / {formatMb(srv.limits.memory)}
                         </span>
                       </div>
-                      <div className="mx-well-3d h-2 rounded-full overflow-hidden p-[1px]">
-                        <div className="h-full rounded-full bg-gradient-to-r from-[#06B6D4] to-[#22D3EE] transition-all duration-300" style={{ width: `${memPct}%` }} />
+                      <div className="mx-well-3d h-2.5 rounded-full overflow-hidden p-[1.5px]">
+                        <div className="mx-meter-cyan h-full rounded-full transition-all duration-300" style={{ width: `${memPct}%` }} />
                       </div>
                     </div>
 
                     <div>
                       <div className="flex justify-between text-[11px] mb-1">
-                        <span className="text-[#777777] dark:text-zinc-400">Disk</span>
-                        <span className="font-mono tabular-nums text-[#171717] dark:text-zinc-200">
+                        <span className="mx-label-3d font-medium text-[#777777] dark:text-zinc-400">Disk</span>
+                        <span className="font-display font-semibold tabular-nums text-[#171717] dark:text-zinc-200">
                           {formatBytes(srv.resources.diskBytes)} / {formatMb(srv.limits.disk)}
                         </span>
                       </div>
-                      <div className="mx-well-3d h-2 rounded-full overflow-hidden p-[1px]">
-                        <div className="h-full rounded-full bg-[#171717] dark:bg-zinc-400 transition-all duration-300" style={{ width: `${diskPct}%` }} />
+                      <div className="mx-well-3d h-2.5 rounded-full overflow-hidden p-[1.5px]">
+                        <div className="mx-meter-neutral h-full rounded-full transition-all duration-300" style={{ width: `${diskPct}%` }} />
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between text-[11px] text-[#777777] dark:text-zinc-400">
-                    <span className="font-mono tabular-nums">
+                  <div className="mt-4 pt-3 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between text-[11px] font-medium text-[#777777] dark:text-zinc-400">
+                    <span className="tabular-nums">
                       {srv.allocations[0]?.ip || '—'}:{srv.allocations[0]?.port || '—'}
                     </span>
-                    <span className="font-mono tabular-nums">{formatUptime(srv.resources.uptimeMs)}</span>
+                    <span className="tabular-nums">{formatUptime(srv.resources.uptimeMs)}</span>
                   </div>
                 </div>
               );
