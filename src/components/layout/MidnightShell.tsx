@@ -318,17 +318,19 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               <User className="w-3.5 h-3.5 text-[#8B5CF6]" />
               Account & 2FA
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAccountMenuOpen(false);
-                window.open('/admin', '_blank', 'noopener,noreferrer');
-              }}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-[#171717] dark:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.06] cursor-pointer"
-            >
-              <Shield className="w-3.5 h-3.5 text-[#06B6D4]" />
-              Administration
-            </button>
+            {user?.role === 'admin' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountMenuOpen(false);
+                  window.open('/admin', '_blank', 'noopener,noreferrer');
+                }}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-[#171717] dark:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.06] cursor-pointer"
+              >
+                <Shield className="w-3.5 h-3.5 text-[#06B6D4]" />
+                Administration
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -491,7 +493,7 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               active={route.page === 'account'}
               onClick={() => navigate({ page: 'account' })}
             />
-            {(!user || user.role === 'admin') && (
+            {user?.role === 'admin' && (
               <NavRow
                 label={t('nav.adminPanel')}
                 icon={Shield}
@@ -508,14 +510,16 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
             <span className="text-[11px] font-medium text-[#777777] dark:text-zinc-500">
               {t('nav.serverExplorer')}
             </span>
-            <button
-              type="button"
-              onClick={() => navigate({ page: 'admin', section: 'servers' })}
-              title="Manage Servers"
-              className="mx-btn-3d w-6 h-6 rounded-full flex items-center justify-center cursor-pointer"
-            >
-              <Plus className="w-3 h-3" />
-            </button>
+            {user?.role === 'admin' && (
+              <button
+                type="button"
+                onClick={() => navigate({ page: 'admin', section: 'servers' })}
+                title="Manage Servers"
+                className="mx-btn-3d w-6 h-6 rounded-full flex items-center justify-center cursor-pointer"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            )}
           </div>
 
           <div className="relative mb-2.5">

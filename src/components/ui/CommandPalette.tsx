@@ -200,7 +200,7 @@ export function CommandPalette() {
       }
     );
 
-    if (!user || user.role === 'admin') {
+    if (user?.role === 'admin') {
       items.push({
         id: 'page:admin',
         group: 'Pages',
