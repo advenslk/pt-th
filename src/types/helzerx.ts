@@ -433,6 +433,15 @@ export interface NotificationChannelPrefs {
   categories: Record<'security' | 'billing' | 'support' | 'community' | 'announcement' | 'reward', boolean>;
 }
 
+export interface GlobalServerLockState {
+  locked: boolean;
+  reason: string;
+  lockedBy: string;
+  lockedAt: string | null;
+  stoppedCount: number;
+  stoppedIdentifiers: string[];
+}
+
 export interface HelzerxBootstrapResponse {
   userId: string;
   username: string;
@@ -449,4 +458,5 @@ export interface HelzerxBootstrapResponse {
   activeAnnouncements: AnnouncementEntry[];
   incidents: ServiceIncidentEntry[];
   recentTransactions: WalletTransaction[];
+  globalServerLock?: GlobalServerLockState;
 }

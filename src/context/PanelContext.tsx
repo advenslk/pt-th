@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { PanelApiError, panelApi, toggleLocalFavorite } from '../api/client';
 import { helzerxApi } from '../api/helzerx';
 import { getLanguageOption, translate, type TranslationKey } from '../i18n/translations';
-import type { HelzerxBootstrapResponse } from '../types/helzerx';
+import type { GlobalServerLockState, HelzerxBootstrapResponse } from '../types/helzerx';
 import type { ActivityLogEntry, PowerSignal, PterodactylServer, UserProfile } from '../types/panel';
 import {
   getRouteMetadata,
@@ -118,6 +118,11 @@ interface PanelContextValue {
   isAutoOptimizing: boolean;
   showOtherServers: boolean;
   setShowOtherServers: (show: boolean) => void;
+  globalServerLock: GlobalServerLockState | null;
+  serversStartLockedForUser: boolean;
+  forceStopBusy: boolean;
+  forceStopAllServers: (reason?: string, signal?: 'kill' | 'stop') => Promise<void>;
+  resumeAllServers: (startServers?: boolean) => Promise<void>;
 }
 
 const PanelContext = createContext<PanelContextValue | null>(null);
@@ -296,6 +301,8 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
   });
+  const [forceStopBusy, setForceStopBusy] = useState(false);
+  const startLockedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -527,14 +534,77 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     });
   }, [systemDark]);
 
+  const globalServerLock = helzerxData?.globalServerLock || null;
+  const serversStartLockedForUser = Boolean(globalServerLock?.locked && user?.role !== 'admin');
+  startLockedRef.current = serversStartLockedForUser;
+
   const sendPower = useCallback(
     async (serverId: string, signal: PowerSignal) => {
+      if (startLockedRef.current && (signal === 'start' || signal === 'restart')) {
+        notify(
+          'Server Start Unavailable',
+          globalServerLock?.reason ||
+            'All servers were force-stopped by Administration. Wait for an admin to resume servers.',
+          'error'
+        );
+        return;
+      }
       try {
         await panelApi.sendPowerSignal(serverId, signal);
         notify(`Power signal "${signal}" sent`, undefined, 'success');
         setTimeout(refreshData, 1200);
       } catch (err: any) {
         notify('Power action failed', err.message, 'error');
+      }
+    },
+    [notify, refreshData, globalServerLock?.reason]
+  );
+
+  const forceStopAllServers = useCallback(
+    async (reason?: string, signal: 'kill' | 'stop' = 'kill') => {
+      setForceStopBusy(true);
+      try {
+        const res = await helzerxApi.forceStopAllServers({ reason, signal });
+        setHelzerxData((prev) =>
+          prev ? { ...prev, globalServerLock: res.globalServerLock } : prev
+        );
+        notify(
+          `Force-stopped ${res.stoppedCount}/${res.totalTargeted} server(s)`,
+          'Normal user Start controls are now locked until resumed by an admin.',
+          'success'
+        );
+        setTimeout(refreshData, 1000);
+      } catch (err: any) {
+        notify('Force Stop All failed', err?.message || 'Admin permission required.', 'error');
+      } finally {
+        setForceStopBusy(false);
+      }
+    },
+    [notify, refreshData]
+  );
+
+  const resumeAllServers = useCallback(
+    async (startServers = false) => {
+      setForceStopBusy(true);
+      try {
+        const res = await helzerxApi.resumeAllServers({ startServers });
+        setHelzerxData((prev) =>
+          prev ? { ...prev, globalServerLock: res.globalServerLock } : prev
+        );
+        notify(
+          startServers
+            ? `Unlocked & started ${res.startedCount} server(s)`
+            : 'User Start controls unlocked',
+          startServers
+            ? 'All stopped servers received a start signal and users can manage power again.'
+            : 'Normal users can now start their servers again.',
+          'success'
+        );
+        setTimeout(refreshData, 1200);
+      } catch (err: any) {
+        notify('Resume failed', err?.message || 'Admin permission required.', 'error');
+      } finally {
+        setForceStopBusy(false);
       }
     },
     [notify, refreshData]
@@ -634,6 +704,7 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
           if (!needsOptimization) continue;
 
           const criticalRamRestart =
+            !startLockedRef.current &&
             autoOptimizeSettings.autoRestartOnCriticalRam &&
             srv.status === 'running' &&
             memPct >= 95;
@@ -741,6 +812,11 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
         isAutoOptimizing,
         showOtherServers,
         setShowOtherServers,
+        globalServerLock,
+        serversStartLockedForUser,
+        forceStopBusy,
+        forceStopAllServers,
+        resumeAllServers,
       }}
     >
       {children}

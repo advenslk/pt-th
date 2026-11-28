@@ -3,6 +3,8 @@ import {
   AlertTriangle,
   Boxes,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Cpu,
   Download,
   ExternalLink,
@@ -52,6 +54,102 @@ interface ModrinthHit {
 
 type ManagerMode = 'plugins' | 'mods';
 type ActiveTab = 'installed' | 'browse';
+type ModrinthSort = 'downloads' | 'relevance' | 'updated' | 'newest';
+
+const BROWSE_PAGE_SIZE = 24;
+const INSTALLED_PAGE_SIZE = 24;
+
+function PaginationBar({
+  page,
+  totalItems,
+  pageSize,
+  loading,
+  label,
+  onPageChange,
+}: {
+  page: number;
+  totalItems: number;
+  pageSize: number;
+  loading?: boolean;
+  label: string;
+  onPageChange: (nextPage: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  if (totalItems === 0) return null;
+
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(totalItems, page * pageSize);
+
+  const pageTokens: Array<number | 'ellipsis'> = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pageTokens.push(i);
+  } else {
+    pageTokens.push(1);
+    if (page > 3) pageTokens.push('ellipsis');
+    const winStart = Math.max(2, page - 1);
+    const winEnd = Math.min(totalPages - 1, page + 1);
+    for (let i = winStart; i <= winEnd; i++) pageTokens.push(i);
+    if (page < totalPages - 2) pageTokens.push('ellipsis');
+    pageTokens.push(totalPages);
+  }
+
+  return (
+    <div className="mx-card-3d px-4 py-3 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="text-xs text-[#777777] dark:text-zinc-400 tabular-nums">
+        Showing <span className="font-semibold text-[#171717] dark:text-white">{start.toLocaleString()}</span>–
+        <span className="font-semibold text-[#171717] dark:text-white">{end.toLocaleString()}</span> of{' '}
+        <span className="font-semibold text-[#171717] dark:text-white">{totalItems.toLocaleString()}</span>{' '}
+        {label}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            disabled={loading || page <= 1}
+            onClick={() => onPageChange(page - 1)}
+            className="mx-btn-3d inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            Prev
+          </button>
+
+          {pageTokens.map((tok, idx) =>
+            tok === 'ellipsis' ? (
+              <span key={`e-${idx}`} className="px-1.5 text-xs text-[#777777] dark:text-zinc-500">
+                ...
+              </span>
+            ) : (
+              <button
+                key={tok}
+                type="button"
+                disabled={loading}
+                onClick={() => onPageChange(tok)}
+                className={`min-w-[32px] h-8 px-2 rounded-xl text-xs font-semibold tabular-nums cursor-pointer transition-all disabled:opacity-50 ${
+                  tok === page
+                    ? 'mx-btn-3d-primary'
+                    : 'mx-btn-3d text-[#525252] dark:text-zinc-300'
+                }`}
+              >
+                {tok}
+              </button>
+            )
+          )}
+
+          <button
+            type="button"
+            disabled={loading || page >= totalPages}
+            onClick={() => onPageChange(page + 1)}
+            className="mx-btn-3d inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Next
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function PluginsModsManagerPage({
   serverId,
@@ -92,14 +190,21 @@ export function PluginsModsManagerPage({
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
 
+  // Installed pagination
+  const [installedPage, setInstalledPage] = useState(1);
+
   // Modrinth browse/install state
   const [query, setQuery] = useState('');
   const [loaderFilter, setLoaderFilter] = useState('all');
   const [mcVersion, setMcVersion] = useState('');
+  const [sortBy, setSortBy] = useState<ModrinthSort>('downloads');
+  const [browsePage, setBrowsePage] = useState(1);
+  const [totalHits, setTotalHits] = useState(0);
   const [searching, setSearching] = useState(false);
   const [hits, setHits] = useState<ModrinthHit[]>([]);
   const [installingId, setInstallingId] = useState<string | null>(null);
   const [installProgress, setInstallProgress] = useState<string | null>(null);
+  const browseTopRef = useRef<HTMLDivElement | null>(null);
 
   // Version picker modal (for manual selection or incompatibility fallback)
   const [versionModalHit, setVersionModalHit] = useState<ModrinthHit | null>(null);
@@ -153,16 +258,28 @@ export function PluginsModsManagerPage({
 
   useEffect(() => {
     setHits([]);
+    setTotalHits(0);
+    setBrowsePage(1);
+    setInstalledPage(1);
     setDetectedEnv(null);
     runEnvDetection();
   }, [server?.id, mode, runEnvDetection]);
 
   const searchModrinth = useCallback(
-    async (qText = query, overrideLoader?: string, overrideMc?: string) => {
+    async (
+      qText = query,
+      pageNum = browsePage,
+      overrideLoader?: string,
+      overrideMc?: string,
+      overrideSort?: ModrinthSort
+    ) => {
       setSearching(true);
       try {
         const activeLoader = overrideLoader !== undefined ? overrideLoader : loaderFilter;
         const activeMc = (overrideMc !== undefined ? overrideMc : mcVersion).trim();
+        const activeSort = overrideSort !== undefined ? overrideSort : sortBy;
+        const safePage = Math.max(1, pageNum);
+        const offset = (safePage - 1) * BROWSE_PAGE_SIZE;
 
         const facets: string[][] = [[`project_type:${isPlugins ? 'plugin' : 'mod'}`]];
 
@@ -186,29 +303,42 @@ export function PluginsModsManagerPage({
         const url = new URL('https://api.modrinth.com/v2/search');
         if (qText.trim()) url.searchParams.set('query', qText.trim());
         url.searchParams.set('facets', JSON.stringify(facets));
-        url.searchParams.set('limit', '18');
-        url.searchParams.set('index', 'downloads');
+        url.searchParams.set('limit', String(BROWSE_PAGE_SIZE));
+        url.searchParams.set('offset', String(offset));
+        url.searchParams.set('index', activeSort);
 
         const res = await fetch(url.toString());
         if (!res.ok) throw new Error(`Modrinth HTTP ${res.status}`);
         const json = await res.json();
         setHits(Array.isArray(json?.hits) ? json.hits : []);
+        setTotalHits(Number(json?.total_hits ?? 0));
       } catch (err: any) {
         notify(`Could not search Modrinth ${labelPlural}`, err?.message || 'Network error', 'error');
       } finally {
         setSearching(false);
       }
     },
-    [query, isPlugins, mode, loaderFilter, mcVersion, autoMatch, labelPlural, notify]
+    [query, browsePage, isPlugins, mode, loaderFilter, mcVersion, sortBy, autoMatch, labelPlural, notify]
   );
 
-  // Re-run search automatically whenever filters sync on Browse tab
+  // Re-run search automatically from page 1 whenever filters or tab sync on Browse tab
   useEffect(() => {
     if (tab === 'browse' && !detectingEnv) {
-      searchModrinth(query, loaderFilter, mcVersion);
+      setBrowsePage(1);
+      searchModrinth(query, 1, loaderFilter, mcVersion, sortBy);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, loaderFilter, mcVersion, autoMatch, detectingEnv]);
+  }, [tab, loaderFilter, mcVersion, sortBy, autoMatch, detectingEnv]);
+
+  const handleBrowsePageChange = (nextPage: number) => {
+    setBrowsePage(nextPage);
+    searchModrinth(query, nextPage, loaderFilter, mcVersion, sortBy);
+    browseTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  useEffect(() => {
+    setInstalledPage(1);
+  }, [searchInstalled, filterState]);
 
   const jarItems = useMemo(() => {
     const q = searchInstalled.trim().toLowerCase();
@@ -222,6 +352,11 @@ export function PluginsModsManagerPage({
         return true;
       });
   }, [files, searchInstalled, filterState]);
+
+  const pagedJarItems = useMemo(() => {
+    const start = (installedPage - 1) * INSTALLED_PAGE_SIZE;
+    return jarItems.slice(start, start + INSTALLED_PAGE_SIZE);
+  }, [jarItems, installedPage]);
 
   const configFolders = useMemo(() => files.filter((f) => f.isDirectory), [files]);
 
@@ -873,8 +1008,9 @@ export function PluginsModsManagerPage({
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-                  {jarItems.map((entry) => {
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                    {pagedJarItems.map((entry) => {
                     const isEnabled = entry.name.endsWith('.jar');
                     const displayName = entry.name.replace(/\.jar(\.disabled)?$/i, '');
                     const matchingConfigFolder = configFolders.find(
@@ -959,6 +1095,14 @@ export function PluginsModsManagerPage({
                     );
                   })}
                 </div>
+                  <PaginationBar
+                    page={installedPage}
+                    totalItems={jarItems.length}
+                    pageSize={INSTALLED_PAGE_SIZE}
+                    label={`installed ${labelPlural.toLowerCase()}`}
+                    onPageChange={setInstalledPage}
+                  />
+                </>
               )}
             </>
           )}
@@ -967,13 +1111,14 @@ export function PluginsModsManagerPage({
 
       {/* TAB 2: BROWSE MODRINTH */}
       {tab === 'browse' && (
-        <div className="space-y-4">
+        <div ref={browseTopRef} className="space-y-4">
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              searchModrinth(query);
+              setBrowsePage(1);
+              searchModrinth(query, 1);
             }}
-            className="mx-card-3d p-4 rounded-2xl flex flex-col lg:flex-row lg:items-center gap-3"
+            className="mx-card-3d p-4 rounded-2xl flex flex-col xl:flex-row xl:items-center gap-3"
           >
             <div className="relative flex-1">
               <Search className="w-3.5 h-3.5 text-[#777777] absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1007,8 +1152,28 @@ export function PluginsModsManagerPage({
                 value={mcVersion}
                 onChange={(e) => setMcVersion(e.target.value)}
                 placeholder="MC Version (e.g. 1.21.1)"
-                className="mx-input-3d w-40 px-3 py-2 text-xs rounded-xl font-mono"
+                className="mx-input-3d w-36 px-3 py-2 text-xs rounded-xl font-mono"
               />
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as ModrinthSort)}
+                aria-label="Sort order"
+                className="mx-input-3d px-3 py-2 text-xs rounded-xl cursor-pointer"
+              >
+                <option value="downloads" className="bg-white dark:bg-[#19191F]">
+                  Most Downloaded
+                </option>
+                <option value="relevance" className="bg-white dark:bg-[#19191F]">
+                  Relevance
+                </option>
+                <option value="updated" className="bg-white dark:bg-[#19191F]">
+                  Recently Updated
+                </option>
+                <option value="newest" className="bg-white dark:bg-[#19191F]">
+                  Newest
+                </option>
+              </select>
 
               <button
                 type="submit"
@@ -1041,112 +1206,127 @@ export function PluginsModsManagerPage({
                 Try clearing the search query or temporarily disabling Auto-Match if your server version is very new or older.
               </p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {hits.map((hit) => {
-                const alreadyInstalled = files.some((f) =>
-                  f.name.toLowerCase().includes(hit.slug.toLowerCase().split('-')[0])
-                );
-                const isInstalling = installingId === hit.project_id;
-                const compat = checkHitCompatibility(hit);
-                const activeLoaderLabel =
-                  loaderFilter !== 'all'
-                    ? LOADER_LABELS[loaderFilter as ServerLoaderId] || loaderFilter
-                    : 'Any';
+              ) : (
+            <>
+              <div
+                className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 transition-opacity ${
+                  searching ? 'opacity-60' : 'opacity-100'
+                }`}
+              >
+                {hits.map((hit) => {
+                  const alreadyInstalled = files.some((f) =>
+                    f.name.toLowerCase().includes(hit.slug.toLowerCase().split('-')[0])
+                  );
+                  const isInstalling = installingId === hit.project_id;
+                  const compat = checkHitCompatibility(hit);
+                  const activeLoaderLabel =
+                    loaderFilter !== 'all'
+                      ? LOADER_LABELS[loaderFilter as ServerLoaderId] || loaderFilter
+                      : 'Any';
 
-                return (
-                  <div
-                    key={hit.project_id}
-                    className="mx-card-3d p-4 rounded-2xl flex flex-col justify-between gap-3"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="mx-well-3d w-11 h-11 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
-                        {hit.icon_url ? (
-                          <img src={hit.icon_url} alt={hit.title} className="w-full h-full object-cover" />
-                        ) : (
-                          <Package className="w-5 h-5 text-[#8B5CF6]" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <h3 className="text-sm font-bold text-[#171717] dark:text-white truncate">
-                            {hit.title}
-                          </h3>
-                          {alreadyInstalled && (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                          )}
-                        </div>
-                        <div className="text-[11px] text-[#777777] dark:text-zinc-400">
-                          by {hit.author} · {hit.downloads.toLocaleString()} downloads
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-[#525252] dark:text-zinc-300 line-clamp-2 leading-relaxed">
-                      {hit.description}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          compat.compatible
-                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                        }`}
-                      >
-                        {compat.compatible ? (
-                          <>
-                            <Sparkles className="w-2.5 h-2.5" />
-                            Compatible · {activeLoaderLabel}
-                            {mcVersion.trim() ? ` ${mcVersion.trim()}` : ''}
-                          </>
-                        ) : (
-                          <>
-                            <AlertTriangle className="w-2.5 h-2.5" />
-                            {!compat.loaderOk ? `${activeLoaderLabel} unsupported` : `No MC ${mcVersion.trim()}`}
-                          </>
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
-                      <a
-                        href={`https://modrinth.com/${isPlugins ? 'plugin' : 'mod'}/${hit.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] text-[#777777] hover:text-[#8B5CF6]"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        Modrinth
-                      </a>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          disabled={Boolean(installingId)}
-                          onClick={() => openVersionSelector(hit)}
-                          className="mx-btn-3d px-2.5 py-1.5 rounded-xl text-[11px] font-medium cursor-pointer disabled:opacity-50"
-                        >
-                          Versions
-                        </button>
-                        <button
-                          type="button"
-                          disabled={Boolean(installingId)}
-                          onClick={() => handleInstallFromModrinth(hit)}
-                          className="mx-btn-3d-primary inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer disabled:opacity-50"
-                        >
-                          {isInstalling ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  return (
+                    <div
+                      key={hit.project_id}
+                      className="mx-card-3d p-4 rounded-2xl flex flex-col justify-between gap-3"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mx-well-3d w-11 h-11 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
+                          {hit.icon_url ? (
+                            <img src={hit.icon_url} alt={hit.title} className="w-full h-full object-cover" />
                           ) : (
-                            <Download className="w-3.5 h-3.5" />
+                            <Package className="w-5 h-5 text-[#8B5CF6]" />
                           )}
-                          {isInstalling ? 'Installing...' : autoMatch ? 'Auto-Install' : 'Install'}
-                        </button>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-sm font-bold text-[#171717] dark:text-white truncate">
+                              {hit.title}
+                            </h3>
+                            {alreadyInstalled && (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            )}
+                          </div>
+                          <div className="text-[11px] text-[#777777] dark:text-zinc-400">
+                            by {hit.author} · {hit.downloads.toLocaleString()} downloads
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-[#525252] dark:text-zinc-300 line-clamp-2 leading-relaxed">
+                        {hit.description}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            compat.compatible
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                          }`}
+                        >
+                          {compat.compatible ? (
+                            <>
+                              <Sparkles className="w-2.5 h-2.5" />
+                              Compatible · {activeLoaderLabel}
+                              {mcVersion.trim() ? ` ${mcVersion.trim()}` : ''}
+                            </>
+                          ) : (
+                            <>
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              {!compat.loaderOk ? `${activeLoaderLabel} unsupported` : `No MC ${mcVersion.trim()}`}
+                            </>
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
+                        <a
+                          href={`https://modrinth.com/${isPlugins ? 'plugin' : 'mod'}/${hit.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-[#777777] hover:text-[#8B5CF6]"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Modrinth
+                        </a>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={Boolean(installingId)}
+                            onClick={() => openVersionSelector(hit)}
+                            className="mx-btn-3d px-2.5 py-1.5 rounded-xl text-[11px] font-medium cursor-pointer disabled:opacity-50"
+                          >
+                            Versions
+                          </button>
+                          <button
+                            type="button"
+                            disabled={Boolean(installingId)}
+                            onClick={() => handleInstallFromModrinth(hit)}
+                            className="mx-btn-3d-primary inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer disabled:opacity-50"
+                          >
+                            {isInstalling ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Download className="w-3.5 h-3.5" />
+                            )}
+                            {isInstalling ? 'Installing...' : autoMatch ? 'Auto-Install' : 'Install'}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+
+              <PaginationBar
+                page={browsePage}
+                totalItems={totalHits}
+                pageSize={BROWSE_PAGE_SIZE}
+                loading={searching}
+                label={labelPlural.toLowerCase()}
+                onPageChange={handleBrowsePageChange}
+              />
+            </>
           )}
         </div>
       )}

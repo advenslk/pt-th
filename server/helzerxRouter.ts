@@ -8,6 +8,7 @@ import type {
   BillingConfig,
   CommunityPost,
   ExtendedProfile,
+  GlobalServerLockState,
   HelzerxCoupon,
   HelzerxInvoice,
   HelzerxPlan,
@@ -59,6 +60,7 @@ interface HelzerxDatabase {
   incidents: ServiceIncidentEntry[];
   notifications: NotificationEntry[];
   notificationPrefs: Record<string, NotificationChannelPrefs>;
+  globalServerLock: GlobalServerLockState;
 }
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -412,6 +414,14 @@ function createInitialDb(): HelzerxDatabase {
     ],
     notifications: [],
     notificationPrefs: {},
+    globalServerLock: {
+      locked: false,
+      reason: '',
+      lockedBy: '',
+      lockedAt: null,
+      stoppedCount: 0,
+      stoppedIdentifiers: [],
+    },
   };
 }
 
@@ -504,6 +514,114 @@ async function resolveUser(req: Request): Promise<ResolvedUser> {
     email: 'owner@helzerx.local',
     isAdmin: hdrRole === 'admin',
   };
+}
+
+export async function resolveHelzerxUser(req: Request): Promise<ResolvedUser> {
+  return resolveUser(req);
+}
+
+export function isGlobalServerLocked(): boolean {
+  const db = loadDb();
+  return Boolean(db.globalServerLock?.locked);
+}
+
+async function collectAllPanelServerIdentifiers(req: Request): Promise<string[]> {
+  const pteroUrl = (process.env.PTERODACTYL_URL || '').replace(/\/$/, '');
+  if (!pteroUrl) return [];
+
+  const appKey = process.env.PTERODACTYL_APP_API_KEY || '';
+  const clientKey = process.env.PTERODACTYL_CLIENT_API_KEY || '';
+  const authHeader = req.headers.authorization;
+  const cookieHeader = req.headers.cookie;
+
+  const clientHeaders: Record<string, string> = { Accept: 'application/json' };
+  if (authHeader) clientHeaders['Authorization'] = authHeader;
+  else if (clientKey) clientHeaders['Authorization'] = `Bearer ${clientKey}`;
+  if (cookieHeader) clientHeaders['Cookie'] = cookieHeader;
+
+  const identifiers = new Set<string>();
+
+  // 1. Fetch all servers across all nodes via Application API if configured
+  if (appKey) {
+    try {
+      let page = 1;
+      let totalPages = 1;
+      while (page <= totalPages && page <= 10) {
+        const res = await fetch(`${pteroUrl}/api/application/servers?per_page=100&page=${page}`, {
+          headers: { Accept: 'application/json', Authorization: `Bearer ${appKey}` },
+        });
+        if (!res.ok) break;
+        const json: any = await res.json();
+        for (const item of json?.data || []) {
+          const id = item?.attributes?.identifier || item?.identifier;
+          if (id) identifiers.add(String(id));
+        }
+        totalPages = Number(json?.meta?.pagination?.total_pages || 1);
+        page += 1;
+      }
+    } catch {
+      // ignore and fall through to Client API
+    }
+  }
+
+  // 2. Fetch via Client API (admin-all, admin, and assigned)
+  const clientEndpoints = [
+    `${pteroUrl}/api/client?type=admin-all&per_page=100`,
+    `${pteroUrl}/api/client?type=admin&per_page=100`,
+    `${pteroUrl}/api/client?per_page=100`,
+  ];
+
+  for (const endpoint of clientEndpoints) {
+    try {
+      const res = await fetch(endpoint, { headers: clientHeaders });
+      if (!res.ok) continue;
+      const json: any = await res.json();
+      for (const item of json?.data || []) {
+        const id = item?.attributes?.identifier || item?.identifier;
+        if (id) identifiers.add(String(id));
+      }
+    } catch {
+      // continue
+    }
+  }
+
+  return Array.from(identifiers);
+}
+
+async function sendPanelServerPower(
+  req: Request,
+  identifier: string,
+  signal: 'kill' | 'stop' | 'start'
+): Promise<boolean> {
+  const pteroUrl = (process.env.PTERODACTYL_URL || '').replace(/\/$/, '');
+  if (!pteroUrl) return false;
+
+  const clientKey = process.env.PTERODACTYL_CLIENT_API_KEY || '';
+  const authHeader = req.headers.authorization;
+  const cookieHeader = req.headers.cookie;
+
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  };
+  if (authHeader) headers['Authorization'] = authHeader;
+  else if (clientKey) headers['Authorization'] = `Bearer ${clientKey}`;
+  if (cookieHeader) headers['Cookie'] = cookieHeader;
+  if (req.headers['x-xsrf-token']) headers['X-XSRF-TOKEN'] = String(req.headers['x-xsrf-token']);
+
+  try {
+    const res = await fetch(
+      `${pteroUrl}/api/client/servers/${encodeURIComponent(identifier)}/power`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ signal }),
+      }
+    );
+    return res.ok || res.status === 204;
+  } catch {
+    return false;
+  }
 }
 
 function ensureUserRecords(db: HelzerxDatabase, u: ResolvedUser, req?: Request) {
@@ -772,6 +890,7 @@ export function createHelzerxRouter() {
       activeAnnouncements,
       incidents: db.incidents.slice(0, 20),
       recentTransactions: db.transactions.filter((t) => t.userId === user.id).slice(0, 5),
+      globalServerLock: db.globalServerLock,
     });
   });
 
@@ -2179,6 +2298,112 @@ export function createHelzerxRouter() {
       `Test alert triggered by ${user.username} at ${new Date().toLocaleString()}`
     );
     res.json({ ok: true });
+  });
+
+  // --- ADMIN GLOBAL FORCE STOP & START LOCK ---
+  router.post('/admin/force-stop-all', async (req: Request, res: Response) => {
+    const user = await resolveUser(req);
+    if (!user.isAdmin) {
+      return res.status(403).json({ error: 'Administrator permission required.' });
+    }
+
+    const db = loadDb();
+    const signal: 'kill' | 'stop' = req.body?.signal === 'stop' ? 'stop' : 'kill';
+    const reason = String(
+      req.body?.reason || 'Emergency force-stop triggered by Administration.'
+    ).slice(0, 240);
+
+    const identifiers = await collectAllPanelServerIdentifiers(req);
+    let stoppedCount = 0;
+    let failedCount = 0;
+    const stoppedIdentifiers: string[] = [];
+
+    for (let i = 0; i < identifiers.length; i += 6) {
+      const batch = identifiers.slice(i, i + 6);
+      const results = await Promise.all(
+        batch.map(async (id) => {
+          const ok = await sendPanelServerPower(req, id, signal);
+          if (!ok && signal === 'kill') {
+            return { id, ok: await sendPanelServerPower(req, id, 'stop') };
+          }
+          return { id, ok };
+        })
+      );
+      for (const r of results) {
+        if (r.ok) {
+          stoppedCount += 1;
+          stoppedIdentifiers.push(r.id);
+        } else {
+          failedCount += 1;
+        }
+      }
+    }
+
+    db.globalServerLock = {
+      locked: true,
+      reason,
+      lockedBy: user.username,
+      lockedAt: nowIso(),
+      stoppedCount,
+      stoppedIdentifiers,
+    };
+    saveDb(db);
+
+    res.json({
+      globalServerLock: db.globalServerLock,
+      totalTargeted: identifiers.length,
+      stoppedCount,
+      failedCount,
+    });
+  });
+
+  router.post('/admin/resume-all', async (req: Request, res: Response) => {
+    const user = await resolveUser(req);
+    if (!user.isAdmin) {
+      return res.status(403).json({ error: 'Administrator permission required.' });
+    }
+
+    const db = loadDb();
+    const startServers = Boolean(req.body?.startServers);
+    const prevIdentifiers = db.globalServerLock?.stoppedIdentifiers || [];
+
+    let startedCount = 0;
+    let failedCount = 0;
+
+    if (startServers) {
+      const requestedIds: string[] = Array.isArray(req.body?.targetIdentifiers) && req.body.targetIdentifiers.length > 0
+        ? req.body.targetIdentifiers.map(String)
+        : prevIdentifiers.length > 0
+          ? prevIdentifiers
+          : await collectAllPanelServerIdentifiers(req);
+
+      for (let i = 0; i < requestedIds.length; i += 6) {
+        const batch = requestedIds.slice(i, i + 6);
+        const results = await Promise.all(
+          batch.map(async (id) => ({ id, ok: await sendPanelServerPower(req, id, 'start') }))
+        );
+        for (const r of results) {
+          if (r.ok) startedCount += 1;
+          else failedCount += 1;
+        }
+      }
+    }
+
+    db.globalServerLock = {
+      locked: false,
+      reason: '',
+      lockedBy: '',
+      lockedAt: null,
+      stoppedCount: 0,
+      stoppedIdentifiers: [],
+    };
+    saveDb(db);
+
+    res.json({
+      globalServerLock: db.globalServerLock,
+      startedCount,
+      failedCount,
+    });
   });
 
   return router;
