@@ -48,6 +48,9 @@ export type MainRoute =
   | { page: 'server-settings'; serverId: string }
   | { page: 'server-activity'; serverId: string }
   | { page: 'server-optimize'; serverId: string }
+  | { page: 'server-plugins'; serverId: string }
+  | { page: 'server-mods'; serverId: string }
+  | { page: 'server-players'; serverId: string }
   | { page: 'account' }
   | { page: 'billing' }
   | { page: 'support' }
@@ -169,6 +172,9 @@ function parsePathname(pathname: string): MainRoute {
     if (sub === 'settings') return { page: 'server-settings', serverId };
     if (sub === 'activity') return { page: 'server-activity', serverId };
     if (sub === 'optimize') return { page: 'server-optimize', serverId };
+    if (sub === 'plugins') return { page: 'server-plugins', serverId };
+    if (sub === 'mods') return { page: 'server-mods', serverId };
+    if (sub === 'players') return { page: 'server-players', serverId };
     return { page: 'server-console', serverId };
   }
   return { page: 'dashboard' };
@@ -204,6 +210,12 @@ function routeToPath(route: MainRoute): string {
       return `/server/${encodeURIComponent(route.serverId)}/activity`;
     case 'server-optimize':
       return `/server/${encodeURIComponent(route.serverId)}/optimize`;
+    case 'server-plugins':
+      return `/server/${encodeURIComponent(route.serverId)}/plugins`;
+    case 'server-mods':
+      return `/server/${encodeURIComponent(route.serverId)}/mods`;
+    case 'server-players':
+      return `/server/${encodeURIComponent(route.serverId)}/players`;
     case 'account':
       return '/account';
     case 'billing':

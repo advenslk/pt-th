@@ -21,12 +21,17 @@ import { RewardsPage } from './pages/RewardsPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { UpdatesPage } from './pages/UpdatesPage';
 import { ServerOptimizePage } from './pages/ServerOptimizePage';
+import { PluginsModsManagerPage } from './pages/PluginsModsManagerPage';
+import { PlayersManagerPage } from './pages/PlayersManagerPage';
 
 function ServerSubNav({ serverId, active }: { serverId: string; active: string }) {
   const { navigate } = usePanel();
   const tabs = [
     { id: 'server-console', label: 'Console' },
     { id: 'server-files', label: 'Files' },
+    { id: 'server-plugins', label: 'Plugins' },
+    { id: 'server-mods', label: 'Mods' },
+    { id: 'server-players', label: 'Players' },
     { id: 'server-databases', label: 'Databases' },
     { id: 'server-schedules', label: 'Schedules' },
     { id: 'server-users', label: 'Users' },
@@ -91,6 +96,13 @@ function PanelRouter() {
           {route.page === 'optimize' && <ServerOptimizePage />}
           {route.page === 'server-console' && <ServerConsolePage serverId={route.serverId} />}
           {route.page === 'server-files' && <FileManagerPage serverId={route.serverId} />}
+          {route.page === 'server-plugins' && (
+            <PluginsModsManagerPage serverId={route.serverId} mode="plugins" />
+          )}
+          {route.page === 'server-mods' && (
+            <PluginsModsManagerPage serverId={route.serverId} mode="mods" />
+          )}
+          {route.page === 'server-players' && <PlayersManagerPage serverId={route.serverId} />}
           {route.page === 'server-backups' && <BackupsPage serverId={route.serverId} />}
           {route.page === 'server-databases' && <DatabasesPage serverId={route.serverId} />}
           {route.page === 'server-network' && <NetworkPage serverId={route.serverId} />}

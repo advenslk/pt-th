@@ -5,6 +5,7 @@ import {
   Archive,
   Award,
   Bell,
+  Boxes,
   CalendarClock,
   ChevronDown,
   ChevronRight,
@@ -23,6 +24,7 @@ import {
   Network,
   Play,
   Plus,
+  Puzzle,
   Search,
   Server,
   Settings,
@@ -32,6 +34,7 @@ import {
   Sun,
   TerminalSquare,
   User,
+  UserCheck,
   Users,
   X,
   Zap,
@@ -134,6 +137,12 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
         return ['Servers', activeServer?.name || route.serverId, 'Console'];
       case 'server-files':
         return ['Servers', activeServer?.name || route.serverId, 'File Manager'];
+      case 'server-plugins':
+        return ['Servers', activeServer?.name || route.serverId, 'Plugins Manager'];
+      case 'server-mods':
+        return ['Servers', activeServer?.name || route.serverId, 'Mods Manager'];
+      case 'server-players':
+        return ['Servers', activeServer?.name || route.serverId, 'Players Manager'];
       case 'server-backups':
         return ['Servers', activeServer?.name || route.serverId, 'Backups'];
       case 'server-databases':
@@ -413,6 +422,24 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               )}
             </div>
             <div className="space-y-1">
+              <NavRow
+                label={t('nav.plugins')}
+                icon={Puzzle}
+                active={route.page === 'server-plugins'}
+                onClick={() => navigate({ page: 'server-plugins', serverId: targetServerId })}
+              />
+              <NavRow
+                label={t('nav.mods')}
+                icon={Boxes}
+                active={route.page === 'server-mods'}
+                onClick={() => navigate({ page: 'server-mods', serverId: targetServerId })}
+              />
+              <NavRow
+                label={t('nav.players')}
+                icon={UserCheck}
+                active={route.page === 'server-players'}
+                onClick={() => navigate({ page: 'server-players', serverId: targetServerId })}
+              />
               <NavRow
                 label={t('nav.backups')}
                 icon={Archive}

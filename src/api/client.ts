@@ -487,7 +487,7 @@ export const panelApi = {
     return res.attributes.url;
   },
 
-  uploadFilesToSignedUrl: async (signedUrl: string, directory: string, files: FileList) => {
+  uploadFilesToSignedUrl: async (signedUrl: string, directory: string, files: FileList | File[]) => {
     const formData = new FormData();
     Array.from(files).forEach((f) => formData.append('files', f));
     const urlObj = new URL(signedUrl, window.location.origin);
