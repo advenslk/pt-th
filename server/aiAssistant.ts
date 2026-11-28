@@ -2,7 +2,12 @@ import { GoogleGenAI, Type, type Content, type FunctionDeclaration } from '@goog
 import type { Request } from 'express';
 import type { AiActionTrace, AiChatMessage } from '../src/types/helzerx';
 
-const AI_MODEL = 'gemini-4-hydrogen';
+// Try the preferred model first, then fall back when Google reports high demand,
+// quota exhaustion, or a temporary server error for that specific model.
+const AI_MODELS = (process.env.GEMINI_MODEL || 'gemini-4-hydrogen,gemini-3.5-flash,gemini-3.5-flash-lite')
+  .split(',')
+  .map((model) => model.trim())
+  .filter(Boolean);
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const SPIGET_API = 'https://api.spiget.org/v2';
 
@@ -60,6 +65,30 @@ function getGeminiClient(): GoogleGenAI {
       },
     },
   });
+}
+
+function isRetryableModelError(err: any): boolean {
+  const raw = String(err?.message || err || '');
+  const codeMatch = raw.match(/"code"\s*:\s*(\d{3})/);
+  if (codeMatch) {
+    const code = Number(codeMatch[1]);
+    return code === 404 || code === 429 || code >= 500;
+  }
+  return /high demand|UNAVAILABLE|RESOURCE_EXHAUSTED|temporarily/i.test(raw);
+}
+
+async function generateAiContent(ai: GoogleGenAI, params: { contents: any; config?: any }): Promise<any> {
+  let lastError: any;
+  for (const model of AI_MODELS) {
+    try {
+      return await ai.models.generateContent({ model, ...params } as any);
+    } catch (err: any) {
+      lastError = err;
+      if (!isRetryableModelError(err)) throw err;
+      console.warn(`[HelzerX AI] Model ${model} unavailable, trying next fallback.`);
+    }
+  }
+  throw lastError;
 }
 
 function isValidServerId(id: string): boolean {
@@ -1049,8 +1078,7 @@ export async function runServerAiAssistant(input: RunAiInput): Promise<RunAiResu
   let finalText = '';
 
   for (let step = 0; step < input.maxSteps; step++) {
-    const response = await ai.models.generateContent({
-      model: AI_MODEL,
+    const response = await generateAiContent(ai, {
       contents,
       config: {
         systemInstruction,
@@ -1089,8 +1117,7 @@ export async function runServerAiAssistant(input: RunAiInput): Promise<RunAiResu
 
     // If this was the final allowed tool step, ask for a concise summary without tools
     if (step === input.maxSteps - 1) {
-      const wrapUp = await ai.models.generateContent({
-        model: AI_MODEL,
+      const wrapUp = await generateAiContent(ai, {
         contents,
         config: {
           systemInstruction,

@@ -602,6 +602,11 @@ async function resolveUser(req: Request): Promise<ResolvedUser> {
     }
   }
 
+  // Dev-only identity headers must never be trusted on a deployed panel.
+  if (process.env.NODE_ENV === 'production') {
+    return { id: '', username: '', displayName: '', email: '', isAdmin: false };
+  }
+
   const hdrId = String(req.headers['x-helzerx-user-id'] || '1');
   const hdrName = String(req.headers['x-helzerx-username'] || 'admin');
   const hdrRole = String(req.headers['x-helzerx-role'] || 'admin');
@@ -2573,6 +2578,7 @@ export function createHelzerxRouter() {
   // --- GEMINI AI SERVER ASSISTANT & CREDITS ---
   router.get('/ai', async (req: Request, res: Response) => {
     const user = await resolveUser(req);
+    if (!user.id) return res.status(401).json({ error: 'Pterodactyl session required.' });
     const db = loadDb();
     ensureUserRecords(db, user, req);
     const account = ensureAiAccount(db, user.id);
@@ -2591,6 +2597,7 @@ export function createHelzerxRouter() {
 
   router.post('/ai/chat', async (req: Request, res: Response) => {
     const user = await resolveUser(req);
+    if (!user.id) return res.status(401).json({ error: 'Pterodactyl session required.' });
     const db = loadDb();
     ensureUserRecords(db, user, req);
     const account = ensureAiAccount(db, user.id);
@@ -2700,6 +2707,7 @@ export function createHelzerxRouter() {
 
   router.delete('/ai/chat', async (req: Request, res: Response) => {
     const user = await resolveUser(req);
+    if (!user.id) return res.status(401).json({ error: 'Pterodactyl session required.' });
     const db = loadDb();
     ensureUserRecords(db, user, req);
     if (!db.aiChatMessages) db.aiChatMessages = {};
@@ -2710,6 +2718,7 @@ export function createHelzerxRouter() {
 
   router.post('/ai/plans/:planId/subscribe', async (req: Request, res: Response) => {
     const user = await resolveUser(req);
+    if (!user.id) return res.status(401).json({ error: 'Pterodactyl session required.' });
     const db = loadDb();
     ensureUserRecords(db, user, req);
     const account = ensureAiAccount(db, user.id);
@@ -2788,6 +2797,7 @@ export function createHelzerxRouter() {
 
   router.post('/ai/admin/manage', async (req: Request, res: Response) => {
     const user = await resolveUser(req);
+    if (!user.id) return res.status(401).json({ error: 'Pterodactyl session required.' });
     if (!user.isAdmin) {
       return res.status(403).json({ error: 'Administrator permission required.' });
     }

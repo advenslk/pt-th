@@ -94,6 +94,57 @@ if [[ -d "$REPO_DIR/laravel-addon" && -d "$PANEL_DIR/app" ]]; then
   php artisan migrate --force || echo "Warning: php artisan migrate returned non-zero (check database permissions)"
 fi
 
+if [[ -f "$REPO_DIR/deploy/midnightx-api.service" ]]; then
+  echo "==> Installing HelzerX AI API service"
+  chown -R www-data:www-data "$REPO_DIR/data"
+  install -m 0644 "$REPO_DIR/deploy/midnightx-api.service" /etc/systemd/system/midnightx-api.service
+  systemctl daemon-reload
+  systemctl enable midnightx-api.service
+
+  NGINX_SITE="${NGINX_SITE:-/etc/nginx/sites-enabled/pterodactyl.conf}"
+  if [[ -f "$NGINX_SITE" ]]; then
+    SNIPPET_PATH=/etc/nginx/snippets/midnightx-ai.conf
+    mkdir -p /etc/nginx/snippets
+    install -m 0644 "$REPO_DIR/deploy/midnightx-ai-nginx.conf" "$SNIPPET_PATH"
+    cp -f "$NGINX_SITE" "$NGINX_SITE.midnightx-bak"
+
+    NGINX_SITE="$NGINX_SITE" SNIPPET_PATH="$SNIPPET_PATH" node -e '
+      const fs = require("fs");
+      const file = process.env.NGINX_SITE;
+      const startMarker = "# MidnightX AI Studio proxy";
+      const endMarker = "# /MidnightX AI Studio proxy";
+      let config = fs.readFileSync(file, "utf8");
+      const start = config.indexOf(startMarker);
+      if (start !== -1) {
+        const end = config.indexOf(endMarker, start);
+        if (end !== -1) {
+          let tail = config.slice(end + endMarker.length);
+          tail = tail.replace(/^\s*\n/, "\n");
+          config = config.slice(0, start) + tail;
+        }
+      }
+      if (!config.includes(startMarker) && config.includes("location ~ \\.php$")) {
+        const block = [
+          "    " + startMarker,
+          "    include " + process.env.SNIPPET_PATH + ";",
+          "    " + endMarker
+        ].join("\n");
+        config = config.replace("    location ~ \\.php$", block + "\n    location ~ \\.php$");
+        fs.writeFileSync(file, config, "utf8");
+      }
+    '
+
+    if nginx -t >/dev/null 2>&1; then
+      systemctl reload nginx
+    else
+      cp -f "$NGINX_SITE.midnightx-bak" "$NGINX_SITE"
+      echo "Warning: nginx config test failed; AI proxy was not installed" >&2
+    fi
+  fi
+
+  systemctl restart midnightx-api.service || echo "Warning: HelzerX AI service failed to start (check journalctl -u midnightx-api)"
+fi
+
 echo "==> Refreshing Laravel caches"
 cd "$PANEL_DIR"
 chown -R www-data:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"

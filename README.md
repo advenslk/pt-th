@@ -80,6 +80,18 @@ cd /var/www/pterodactyl/midnightx
 | `./reset.sh /path/to/backup` | Roll back using a specific backup directory |
 | `./status.sh` | Show local/remote commits, built asset name, service status, URLs |
 
+### AI Studio
+
+The AI Studio backend runs as a local Node service (`midnightx-api.service`) that the panel proxies
+at `/api/client/helzerx/ai/*`. `./deploy.sh` installs the service and the Nginx proxy automatically.
+Set `PTERODACTYL_URL` and `GEMINI_API_KEY` in `.env` before deploying. If a Gemini model is busy,
+the assistant automatically falls back to the next model in `GEMINI_MODEL`.
+
+```bash
+systemctl status midnightx-api
+journalctl -u midnightx-api -f
+```
+
 Typical workflow after you edit the theme from another machine:
 
 ```bash

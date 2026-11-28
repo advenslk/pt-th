@@ -7,6 +7,7 @@ import { createHelzerxRouter, isGlobalServerLocked, resolveHelzerxUser } from '.
 dotenv.config();
 
 const PORT = Number(process.env.PORT || 3000);
+const HOST = process.env.HOST || '0.0.0.0';
 const PTERO_URL = (process.env.PTERODACTYL_URL || '').replace(/\/$/, '');
 const PTERO_CLIENT_KEY = process.env.PTERODACTYL_CLIENT_API_KEY || '';
 const PTERO_APP_KEY = process.env.PTERODACTYL_APP_API_KEY || '';
@@ -188,8 +189,8 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`HelzerX Panel Server listening on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`HelzerX Panel Server listening on http://${HOST}:${PORT}`);
   });
 }
 

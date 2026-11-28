@@ -1,0 +1,21 @@
+[Unit]
+Description=MidnightX HelzerX AI API
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/pterodactyl/midnightx
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
+ExecStart=/usr/bin/node /var/www/pterodactyl/midnightx/node_modules/tsx/dist/cli.mjs server.ts
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
