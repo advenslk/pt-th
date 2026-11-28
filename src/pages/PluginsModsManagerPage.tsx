@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  Bot,
   Boxes,
   CheckCircle2,
   ChevronLeft,
@@ -771,6 +772,14 @@ export function PluginsModsManagerPage({
           >
             <FileCode2 className="w-3.5 h-3.5 text-[#8B5CF6]" />
             Configs
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate({ page: 'server-ai', serverId: server.id })}
+            className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
+          >
+            <Bot className="w-3.5 h-3.5 text-[#8B5CF6]" />
+            AI Customize
           </button>
           <button
             type="button"

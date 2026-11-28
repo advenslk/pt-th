@@ -23,6 +23,7 @@ import { UpdatesPage } from './pages/UpdatesPage';
 import { ServerOptimizePage } from './pages/ServerOptimizePage';
 import { PluginsModsManagerPage } from './pages/PluginsModsManagerPage';
 import { PlayersManagerPage } from './pages/PlayersManagerPage';
+import { AiAssistantPage } from './pages/AiAssistantPage';
 
 function ServerSubNav({ serverId, active }: { serverId: string; active: string }) {
   const { navigate } = usePanel();
@@ -41,6 +42,7 @@ function ServerSubNav({ serverId, active }: { serverId: string; active: string }
     { id: 'server-settings', label: 'Settings' },
     { id: 'server-activity', label: 'Activity' },
     { id: 'server-optimize', label: 'Optimize' },
+    { id: 'server-ai', label: 'AI Studio' },
   ] as const;
 
   return (
@@ -94,6 +96,7 @@ function PanelRouter() {
           {route.page === 'dashboard' && <DashboardPage />}
           {route.page === 'servers' && <ServersPage />}
           {route.page === 'optimize' && <ServerOptimizePage />}
+          {route.page === 'ai' && <AiAssistantPage />}
           {route.page === 'server-console' && <ServerConsolePage serverId={route.serverId} />}
           {route.page === 'server-files' && <FileManagerPage serverId={route.serverId} />}
           {route.page === 'server-plugins' && (
@@ -112,6 +115,7 @@ function PanelRouter() {
           {route.page === 'server-settings' && <ServerSettingsPage serverId={route.serverId} />}
           {route.page === 'server-activity' && <ServerActivityPage serverId={route.serverId} />}
           {route.page === 'server-optimize' && <ServerOptimizePage serverId={route.serverId} />}
+          {route.page === 'server-ai' && <AiAssistantPage serverId={route.serverId} />}
           {route.page === 'account' && <UserProfilePage />}
           {route.page === 'billing' && <BillingPage />}
           {route.page === 'support' && <SupportPage />}

@@ -5,6 +5,7 @@ import {
   Archive,
   Award,
   Bell,
+  Bot,
   Boxes,
   CalendarClock,
   ChevronDown,
@@ -139,6 +140,8 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
         return ['HelzerX', 'Servers'];
       case 'optimize':
         return ['HelzerX', 'Server Optimizer'];
+      case 'ai':
+        return ['HelzerX', 'AI Studio'];
       case 'server-console':
         return ['Servers', activeServer?.name || route.serverId, 'Console'];
       case 'server-files':
@@ -167,6 +170,8 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
         return ['Servers', activeServer?.name || route.serverId, 'Activity'];
       case 'server-optimize':
         return ['Servers', activeServer?.name || route.serverId, 'Optimize'];
+      case 'server-ai':
+        return ['Servers', activeServer?.name || route.serverId, 'AI Studio'];
       case 'account':
         return ['HelzerX', 'Account Security'];
       case 'billing':
@@ -398,6 +403,12 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
               count={autoOptimizeSettings.enabled ? 'AUTO' : undefined}
               onClick={() => navigate({ page: 'optimize' })}
             />
+            <NavRow
+              label={t('nav.ai')}
+              icon={Bot}
+              active={route.page === 'ai'}
+              onClick={() => navigate({ page: 'ai' })}
+            />
             {isManagingServer && targetServerId && (
               <>
                 <NavRow
@@ -500,6 +511,12 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
                 active={route.page === 'server-optimize'}
                 count={autoOptimizeSettings.enabled && !autoOptimizeSettings.disabledServerIds.includes(targetServerId) ? 'ON' : undefined}
                 onClick={() => navigate({ page: 'server-optimize', serverId: targetServerId })}
+              />
+              <NavRow
+                label={t('nav.ai')}
+                icon={Bot}
+                active={route.page === 'server-ai'}
+                onClick={() => navigate({ page: 'server-ai', serverId: targetServerId })}
               />
             </div>
           </div>

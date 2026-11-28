@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Bot,
   Boxes,
   FolderOpen,
   LayoutGrid,
@@ -141,6 +142,14 @@ export function ServersPage() {
           >
             <Zap className="w-3.5 h-3.5 text-[#8B5CF6]" />
             Optimizer
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate({ page: 'ai' })}
+            className="mx-btn-3d inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer"
+          >
+            <Bot className="w-3.5 h-3.5 text-[#8B5CF6]" />
+            AI Studio
           </button>
           <div className="mx-well-3d inline-flex items-center p-1 rounded-xl gap-1">
             <button
@@ -427,6 +436,14 @@ export function ServersPage() {
                     )}
                     <button
                       type="button"
+                      title="AI Studio"
+                      onClick={() => navigate({ page: 'server-ai', serverId: srv.id })}
+                      className="mx-btn-3d p-1.5 rounded-lg cursor-pointer"
+                    >
+                      <Bot className="w-3.5 h-3.5 text-[#8B5CF6]" />
+                    </button>
+                    <button
+                      type="button"
                       title="Optimize Server"
                       onClick={() => navigate({ page: 'server-optimize', serverId: srv.id })}
                       className="mx-btn-3d p-1.5 rounded-lg cursor-pointer"
@@ -513,6 +530,14 @@ export function ServersPage() {
                         className="mx-btn-3d p-1.5 rounded-lg cursor-pointer"
                       >
                         <Star className={`w-3.5 h-3.5 ${srv.isFavorite ? 'fill-amber-400 text-amber-400' : 'text-[#777777]'}`} />
+                      </button>
+                      <button
+                        type="button"
+                        title="AI Studio"
+                        onClick={() => navigate({ page: 'server-ai', serverId: srv.id })}
+                        className="mx-btn-3d p-1.5 rounded-lg cursor-pointer"
+                      >
+                        <Bot className="w-3.5 h-3.5 text-[#8B5CF6]" />
                       </button>
                       <button
                         type="button"

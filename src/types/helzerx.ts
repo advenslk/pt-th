@@ -460,3 +460,71 @@ export interface HelzerxBootstrapResponse {
   recentTransactions: WalletTransaction[];
   globalServerLock?: GlobalServerLockState;
 }
+
+export type AiPlanId = 'free' | 'starter' | 'pro' | 'studio' | 'enterprise';
+
+export interface AiCreditPlan {
+  id: AiPlanId;
+  name: string;
+  audience: string;
+  creditPercent: number;
+  monthlyCredits: number;
+  priceMonthly: number;
+  maxToolStepsPerTurn: number;
+  description: string;
+  capabilities: string[];
+  popular?: boolean;
+}
+
+export interface AiActionTrace {
+  tool: string;
+  summary: string;
+  target?: string;
+  status: 'success' | 'error';
+}
+
+export interface AiUsageLogEntry {
+  id: string;
+  userId: string;
+  serverId: string;
+  serverName: string;
+  promptPreview: string;
+  actions: AiActionTrace[];
+  creditsUsed: number;
+  createdAt: string;
+}
+
+export interface AiAccountState {
+  userId: string;
+  planId: AiPlanId;
+  planName: string;
+  creditPercentCapacity: number;
+  monthlyCreditLimit: number;
+  creditsRemaining: number;
+  creditsUsed: number;
+  remainingPercentOfPlan: number;
+  remainingPercentOfMax: number;
+  resetAt: string;
+  updatedAt: string;
+}
+
+export interface AiChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  serverId?: string;
+  serverName?: string;
+  actions?: AiActionTrace[];
+  creditsUsed?: number;
+  createdAt: string;
+}
+
+export interface AiStateResponse {
+  account: AiAccountState;
+  plans: AiCreditPlan[];
+  walletBalance: number;
+  history: AiUsageLogEntry[];
+  messages: AiChatMessage[];
+  geminiConfigured: boolean;
+}
+

@@ -2,7 +2,13 @@ import crypto from 'crypto';
 import express, { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { runServerAiAssistant } from './aiAssistant';
 import type {
+  AiAccountState,
+  AiChatMessage,
+  AiCreditPlan,
+  AiPlanId,
+  AiUsageLogEntry,
   AnnouncementEntry,
   BadgeDefinition,
   BillingConfig,
@@ -61,7 +67,96 @@ interface HelzerxDatabase {
   notifications: NotificationEntry[];
   notificationPrefs: Record<string, NotificationChannelPrefs>;
   globalServerLock: GlobalServerLockState;
+  aiAccounts: Record<string, AiAccountState>;
+  aiUsageHistory: AiUsageLogEntry[];
+  aiChatMessages: Record<string, AiChatMessage[]>;
 }
+
+const AI_MAX_MONTHLY_CREDITS = 1000;
+
+const AI_CREDIT_PLANS: AiCreditPlan[] = [
+  {
+    id: 'free',
+    name: 'Free Starter',
+    audience: 'For trying server AI',
+    creditPercent: 10,
+    monthlyCredits: 100,
+    priceMonthly: 0,
+    maxToolStepsPerTurn: 4,
+    description: '10% monthly AI credit capacity for quick Q&A, log reading, and light config checks.',
+    capabilities: [
+      '100 monthly AI credits (10% capacity)',
+      'Up to 4 automated tool steps per request',
+      'Inspect files, plugins, and server logs',
+      'Single config edits & compatibility advice',
+    ],
+  },
+  {
+    id: 'starter',
+    name: 'Builder 25%',
+    audience: 'For solo server owners',
+    creditPercent: 25,
+    monthlyCredits: 250,
+    priceMonthly: 3.99,
+    maxToolStepsPerTurn: 6,
+    description: '25% capacity for installing compatible plugins/mods and customizing plugin configs.',
+    capabilities: [
+      '250 monthly AI credits (25% capacity)',
+      'Up to 6 automated tool steps per request',
+      'Auto-install compatible Modrinth plugins & mods',
+      'Plugin YAML, JSON & properties customization',
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'Creator 50%',
+    audience: 'For growing SMP servers',
+    creditPercent: 50,
+    monthlyCredits: 500,
+    priceMonthly: 7.99,
+    maxToolStepsPerTurn: 8,
+    description: '50% capacity for multi-plugin setup, permissions tuning, and log crash repair.',
+    capabilities: [
+      '500 monthly AI credits (50% capacity)',
+      'Up to 8 automated tool steps per request',
+      'Multi-plugin config & dependency chains',
+      'Startup flags, TPS tuning & crash diagnosis',
+    ],
+    popular: true,
+  },
+  {
+    id: 'studio',
+    name: 'Studio 75%',
+    audience: 'For active networks',
+    creditPercent: 75,
+    monthlyCredits: 750,
+    priceMonthly: 14.99,
+    maxToolStepsPerTurn: 10,
+    description: '75% capacity for automated proxy/backend setup and full plugin suite configuration.',
+    capabilities: [
+      '750 monthly AI credits (75% capacity)',
+      'Up to 10 automated tool steps per request',
+      'Full plugin suite configuration & message styling',
+      'Live console command automation & batch edits',
+    ],
+  },
+  {
+    id: 'enterprise',
+    name: 'Full 100%',
+    audience: 'For large hosting fleets',
+    creditPercent: 100,
+    monthlyCredits: 1000,
+    priceMonthly: 24.99,
+    maxToolStepsPerTurn: 12,
+    description: 'Full 100% monthly AI capacity for unlimited multi-step plugin & mod management.',
+    capabilities: [
+      '1,000 monthly AI credits (100% capacity)',
+      'Up to 12 automated tool steps per request',
+      'Deep multi-file plugin & modpack customization',
+      'Full lifecycle control across your servers',
+    ],
+  },
+];
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'helzerx-db.json');
@@ -422,6 +517,9 @@ function createInitialDb(): HelzerxDatabase {
       stoppedCount: 0,
       stoppedIdentifiers: [],
     },
+    aiAccounts: {},
+    aiUsageHistory: [],
+    aiChatMessages: {},
   };
 }
 
@@ -748,6 +846,72 @@ function ensureUserRecords(db: HelzerxDatabase, u: ResolvedUser, req?: Request) 
   }
 
   if (dirty) saveDb(db);
+}
+
+function getAiPlanById(planId: string): AiCreditPlan {
+  return AI_CREDIT_PLANS.find((p) => p.id === planId) || AI_CREDIT_PLANS[0];
+}
+
+function syncAiPercentages(acc: AiAccountState): AiAccountState {
+  const limit = Math.max(1, acc.monthlyCreditLimit);
+  acc.creditsRemaining = Math.max(0, Math.min(limit, Math.round(acc.creditsRemaining)));
+  acc.creditsUsed = Math.max(0, Math.round(acc.creditsUsed));
+  acc.remainingPercentOfPlan = Math.max(
+    0,
+    Math.min(100, Math.round((acc.creditsRemaining / limit) * 100))
+  );
+  acc.remainingPercentOfMax = Math.max(
+    0,
+    Math.min(100, Number(((acc.creditsRemaining / AI_MAX_MONTHLY_CREDITS) * 100).toFixed(1)))
+  );
+  return acc;
+}
+
+function ensureAiAccount(db: HelzerxDatabase, userId: string): AiAccountState {
+  if (!db.aiAccounts) db.aiAccounts = {};
+  if (!db.aiUsageHistory) db.aiUsageHistory = [];
+  if (!db.aiChatMessages) db.aiChatMessages = {};
+
+  let acc = db.aiAccounts[userId];
+  const nowMs = Date.now();
+  const nextResetIso = new Date(nowMs + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  if (!acc) {
+    const freePlan = AI_CREDIT_PLANS[0];
+    acc = syncAiPercentages({
+      userId,
+      planId: freePlan.id,
+      planName: freePlan.name,
+      creditPercentCapacity: freePlan.creditPercent,
+      monthlyCreditLimit: freePlan.monthlyCredits,
+      creditsRemaining: freePlan.monthlyCredits,
+      creditsUsed: 0,
+      remainingPercentOfPlan: 100,
+      remainingPercentOfMax: freePlan.creditPercent,
+      resetAt: nextResetIso,
+      updatedAt: nowIso(),
+    });
+    db.aiAccounts[userId] = acc;
+    saveDb(db);
+    return acc;
+  }
+
+  // Monthly cycle renewal
+  if (acc.resetAt && nowMs > new Date(acc.resetAt).getTime()) {
+    const plan = getAiPlanById(acc.planId);
+    acc.monthlyCreditLimit = plan.monthlyCredits;
+    acc.creditPercentCapacity = plan.creditPercent;
+    acc.creditsRemaining = plan.monthlyCredits;
+    acc.creditsUsed = 0;
+    acc.resetAt = nextResetIso;
+    acc.updatedAt = nowIso();
+    syncAiPercentages(acc);
+    saveDb(db);
+  } else {
+    syncAiPercentages(acc);
+  }
+
+  return acc;
 }
 
 function awardXpAndBadge(db: HelzerxDatabase, userId: string, xpGain: number, pointsGain: number, badgeId?: string) {
@@ -2404,6 +2568,263 @@ export function createHelzerxRouter() {
       startedCount,
       failedCount,
     });
+  });
+
+  // --- GEMINI AI SERVER ASSISTANT & CREDITS ---
+  router.get('/ai', async (req: Request, res: Response) => {
+    const user = await resolveUser(req);
+    const db = loadDb();
+    ensureUserRecords(db, user, req);
+    const account = ensureAiAccount(db, user.id);
+    const history = (db.aiUsageHistory || []).filter((h) => h.userId === user.id).slice(0, 60);
+    const messages = (db.aiChatMessages?.[user.id] || []).slice(-60);
+
+    res.json({
+      account,
+      plans: AI_CREDIT_PLANS,
+      walletBalance: db.wallets[user.id] || 0,
+      history,
+      messages,
+      geminiConfigured: Boolean((process.env.GEMINI_API_KEY || '').trim()),
+    });
+  });
+
+  router.post('/ai/chat', async (req: Request, res: Response) => {
+    const user = await resolveUser(req);
+    const db = loadDb();
+    ensureUserRecords(db, user, req);
+    const account = ensureAiAccount(db, user.id);
+
+    const serverId = String(req.body?.serverId || '').trim();
+    const message = String(req.body?.message || '').trim();
+    if (!serverId) {
+      return res.status(400).json({ error: 'Select a target server first.' });
+    }
+    if (!message) {
+      return res.status(400).json({ error: 'Enter a message for the AI assistant.' });
+    }
+    if (message.length > 4000) {
+      return res.status(400).json({ error: 'Message exceeds 4000 character limit.' });
+    }
+
+    if (account.creditsRemaining < 2) {
+      return res.status(402).json({
+        error: 'AI_CREDITS_EXHAUSTED',
+        message: 'Your AI credits are exhausted for this cycle. Upgrade your AI plan to continue.',
+      });
+    }
+
+    const plan = getAiPlanById(account.planId);
+    const recentMessages = db.aiChatMessages?.[user.id] || [];
+
+    try {
+      const result = await runServerAiAssistant({
+        req,
+        serverId,
+        message,
+        recentMessages,
+        maxSteps: plan.maxToolStepsPerTurn,
+        isAdmin: user.isAdmin,
+        isGlobalLocked: Boolean(db.globalServerLock?.locked),
+      });
+
+      const creditsUsed = Math.min(
+        account.creditsRemaining,
+        Math.min(16, 2 + result.mutatingActionCount * 2)
+      );
+
+      account.creditsRemaining = Math.max(0, account.creditsRemaining - creditsUsed);
+      account.creditsUsed += creditsUsed;
+      account.updatedAt = nowIso();
+      syncAiPercentages(account);
+
+      const userMsg: AiChatMessage = {
+        id: uid('aim'),
+        role: 'user',
+        text: message,
+        serverId,
+        serverName: result.serverName,
+        createdAt: nowIso(),
+      };
+      const assistantMsg: AiChatMessage = {
+        id: uid('aim'),
+        role: 'assistant',
+        text: result.reply,
+        serverId,
+        serverName: result.serverName,
+        actions: result.actions,
+        creditsUsed,
+        createdAt: nowIso(),
+      };
+
+      if (!db.aiChatMessages[user.id]) db.aiChatMessages[user.id] = [];
+      db.aiChatMessages[user.id].push(userMsg, assistantMsg);
+      if (db.aiChatMessages[user.id].length > 80) {
+        db.aiChatMessages[user.id] = db.aiChatMessages[user.id].slice(-80);
+      }
+
+      const usageEntry: AiUsageLogEntry = {
+        id: uid('aiu'),
+        userId: user.id,
+        serverId,
+        serverName: result.serverName,
+        promptPreview: message.slice(0, 140),
+        actions: result.actions,
+        creditsUsed,
+        createdAt: nowIso(),
+      };
+      db.aiUsageHistory.unshift(usageEntry);
+      if (db.aiUsageHistory.length > 300) {
+        db.aiUsageHistory = db.aiUsageHistory.slice(0, 300);
+      }
+
+      saveDb(db);
+
+      res.json({
+        account,
+        userMessage: userMsg,
+        assistantMessage: assistantMsg,
+        usageEntry,
+      });
+    } catch (err: any) {
+      const msg = err?.message || 'AI assistant failed to complete the request.';
+      const statusCode =
+        msg.includes('API_KEY_INVALID') || msg.includes('PERMISSION_DENIED') || msg.includes('GEMINI_API_KEY')
+          ? 503
+          : msg.includes('RESOURCE_EXHAUSTED') || msg.includes('429')
+            ? 429
+            : 500;
+      res.status(statusCode).json({ error: msg });
+    }
+  });
+
+  router.delete('/ai/chat', async (req: Request, res: Response) => {
+    const user = await resolveUser(req);
+    const db = loadDb();
+    ensureUserRecords(db, user, req);
+    if (!db.aiChatMessages) db.aiChatMessages = {};
+    db.aiChatMessages[user.id] = [];
+    saveDb(db);
+    res.json({ ok: true });
+  });
+
+  router.post('/ai/plans/:planId/subscribe', async (req: Request, res: Response) => {
+    const user = await resolveUser(req);
+    const db = loadDb();
+    ensureUserRecords(db, user, req);
+    const account = ensureAiAccount(db, user.id);
+
+    const plan = AI_CREDIT_PLANS.find((p) => p.id === (req.params.planId as AiPlanId));
+    if (!plan) {
+      return res.status(404).json({ error: 'AI credit plan not found.' });
+    }
+
+    const adminOverride = Boolean(req.body?.adminOverride && user.isAdmin);
+
+    if (plan.priceMonthly > 0 && !adminOverride) {
+      const balance = db.wallets[user.id] || 0;
+      if (balance < plan.priceMonthly) {
+        return res.status(402).json({
+          error: `Insufficient wallet balance ($${balance.toFixed(2)}). ${plan.name} costs $${plan.priceMonthly.toFixed(2)}/mo.`,
+        });
+      }
+
+      db.wallets[user.id] = Number((balance - plan.priceMonthly).toFixed(2));
+      db.transactions.unshift({
+        id: uid('tx'),
+        userId: user.id,
+        type: 'debit',
+        amount: plan.priceMonthly,
+        taxAmount: 0,
+        method: 'HelzerX Wallet',
+        status: 'completed',
+        reference: `AI-${plan.id.toUpperCase()}`,
+        note: `AI Credits Plan: ${plan.name} (${plan.creditPercent}% / ${plan.monthlyCredits} credits)`,
+        createdAt: nowIso(),
+      });
+
+      db.invoices.unshift({
+        id: uid('inv'),
+        userId: user.id,
+        username: user.username,
+        number: `INV-${new Date().getFullYear()}-${String(db.invoices.length + 1001)}`,
+        description: `HelzerX AI — ${plan.name} (${plan.creditPercent}% Credits)`,
+        subtotal: plan.priceMonthly,
+        taxRate: 0,
+        taxAmount: 0,
+        discountAmount: 0,
+        total: plan.priceMonthly,
+        status: 'paid',
+        method: 'HelzerX Wallet',
+        issuedAt: nowIso(),
+        paidAt: nowIso(),
+      });
+    }
+
+    account.planId = plan.id;
+    account.planName = plan.name;
+    account.creditPercentCapacity = plan.creditPercent;
+    account.monthlyCreditLimit = plan.monthlyCredits;
+    account.creditsRemaining = plan.monthlyCredits;
+    account.creditsUsed = 0;
+    account.resetAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    account.updatedAt = nowIso();
+    syncAiPercentages(account);
+
+    pushNotification(db, user.id, {
+      category: 'billing',
+      priority: 'normal',
+      title: `AI Plan Active: ${plan.name}`,
+      body: `${plan.creditPercent}% capacity (${plan.monthlyCredits} credits) ready for use.`,
+      linkPage: 'dashboard',
+    });
+
+    saveDb(db);
+    res.json({
+      account,
+      walletBalance: db.wallets[user.id] || 0,
+    });
+  });
+
+  router.post('/ai/admin/manage', async (req: Request, res: Response) => {
+    const user = await resolveUser(req);
+    if (!user.isAdmin) {
+      return res.status(403).json({ error: 'Administrator permission required.' });
+    }
+
+    const db = loadDb();
+    ensureUserRecords(db, user, req);
+    const targetUserId = String(req.body?.userId || user.id);
+    const account = ensureAiAccount(db, targetUserId);
+
+    if (req.body?.planId) {
+      const plan = AI_CREDIT_PLANS.find((p) => p.id === req.body.planId);
+      if (!plan) return res.status(404).json({ error: 'AI credit plan not found.' });
+      account.planId = plan.id;
+      account.planName = plan.name;
+      account.creditPercentCapacity = plan.creditPercent;
+      account.monthlyCreditLimit = plan.monthlyCredits;
+      account.creditsRemaining = plan.monthlyCredits;
+      account.creditsUsed = 0;
+    }
+
+    if (typeof req.body?.bonusCredits === 'number' && req.body.bonusCredits > 0) {
+      account.creditsRemaining = Math.min(
+        account.monthlyCreditLimit,
+        account.creditsRemaining + Math.round(req.body.bonusCredits)
+      );
+    }
+
+    if (req.body?.resetCycle) {
+      account.creditsRemaining = account.monthlyCreditLimit;
+      account.creditsUsed = 0;
+    }
+
+    account.updatedAt = nowIso();
+    syncAiPercentages(account);
+    saveDb(db);
+
+    res.json({ account });
   });
 
   return router;

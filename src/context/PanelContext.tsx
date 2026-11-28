@@ -37,6 +37,7 @@ export type MainRoute =
   | { page: 'dashboard' }
   | { page: 'servers' }
   | { page: 'optimize' }
+  | { page: 'ai' }
   | { page: 'server-console'; serverId: string }
   | { page: 'server-files'; serverId: string }
   | { page: 'server-backups'; serverId: string }
@@ -51,6 +52,7 @@ export type MainRoute =
   | { page: 'server-plugins'; serverId: string }
   | { page: 'server-mods'; serverId: string }
   | { page: 'server-players'; serverId: string }
+  | { page: 'server-ai'; serverId: string }
   | { page: 'account' }
   | { page: 'billing' }
   | { page: 'support' }
@@ -153,6 +155,7 @@ function parsePathname(pathname: string): MainRoute {
   if (clean === '/' || clean === '/dashboard') return { page: 'dashboard' };
   if (clean === '/servers') return { page: 'servers' };
   if (clean === '/optimize') return { page: 'optimize' };
+  if (clean === '/ai') return { page: 'ai' };
   if (clean === '/account' || clean.startsWith('/account/')) return { page: 'account' };
   if (clean === '/billing') return { page: 'billing' };
   if (clean === '/support') return { page: 'support' };
@@ -180,6 +183,7 @@ function parsePathname(pathname: string): MainRoute {
     if (sub === 'plugins') return { page: 'server-plugins', serverId };
     if (sub === 'mods') return { page: 'server-mods', serverId };
     if (sub === 'players') return { page: 'server-players', serverId };
+    if (sub === 'ai') return { page: 'server-ai', serverId };
     return { page: 'server-console', serverId };
   }
   return { page: 'dashboard' };
@@ -193,6 +197,8 @@ function routeToPath(route: MainRoute): string {
       return '/servers';
     case 'optimize':
       return '/optimize';
+    case 'ai':
+      return '/ai';
     case 'server-console':
       return `/server/${encodeURIComponent(route.serverId)}/console`;
     case 'server-files':
@@ -221,6 +227,8 @@ function routeToPath(route: MainRoute): string {
       return `/server/${encodeURIComponent(route.serverId)}/mods`;
     case 'server-players':
       return `/server/${encodeURIComponent(route.serverId)}/players`;
+    case 'server-ai':
+      return `/server/${encodeURIComponent(route.serverId)}/ai`;
     case 'account':
       return '/account';
     case 'billing':
