@@ -3,6 +3,7 @@ import {
   Archive,
   Award,
   Bell,
+  Bot,
   Boxes,
   CalendarClock,
   Command,
@@ -158,6 +159,15 @@ export function CommandPalette() {
         onSelect: () => go({ page: 'optimize' }),
       },
       {
+        id: 'page:ai',
+        group: 'Pages',
+        label: 'Server AI Studio',
+        subtitle: 'Gemini server AI for plugins, mods, config customization & credit plans',
+        keywords: 'ai gemini assistant plugins mods customize config credits plan',
+        icon: Bot,
+        onSelect: () => go({ page: 'ai' }),
+      },
+      {
         id: 'page:account',
         group: 'Pages',
         label: 'Account & Security',
@@ -267,6 +277,7 @@ export function CommandPalette() {
         { page: 'server-startup', title: 'Startup', icon: Play },
         { page: 'server-settings', title: 'Settings', icon: SlidersHorizontal },
         { page: 'server-optimize', title: 'Optimize', icon: Zap },
+        { page: 'server-ai', title: 'AI Studio', icon: Bot },
       ];
 
       subRoutes.forEach((sub) => {

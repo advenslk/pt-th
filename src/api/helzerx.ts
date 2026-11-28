@@ -1,5 +1,10 @@
 import { PanelApiError } from './client';
 import type {
+  AiAccountState,
+  AiChatMessage,
+  AiPlanId,
+  AiStateResponse,
+  AiUsageLogEntry,
   AnnouncementEntry,
   BillingConfig,
   BillingOverviewResponse,
@@ -416,5 +421,41 @@ export const helzerxApi = {
     }>('/admin/resume-all', {
       method: 'POST',
       body: JSON.stringify(payload || {}),
+    }),
+
+  // Gemini Server AI Assistant & Credit Plans
+  getAiState: () => hxRequest<AiStateResponse>('/ai'),
+
+  sendAiChat: (payload: { serverId: string; message: string }) =>
+    hxRequest<{
+      account: AiAccountState;
+      userMessage: AiChatMessage;
+      assistantMessage: AiChatMessage;
+      usageEntry: AiUsageLogEntry;
+    }>('/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  clearAiChat: () => hxRequest<{ ok: boolean }>('/ai/chat', { method: 'DELETE' }),
+
+  subscribeAiPlan: (planId: AiPlanId, adminOverride = false) =>
+    hxRequest<{ account: AiAccountState; walletBalance: number }>(
+      `/ai/plans/${encodeURIComponent(planId)}/subscribe`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ adminOverride }),
+      }
+    ),
+
+  adminManageAiCredits: (payload: {
+    userId?: string;
+    planId?: AiPlanId;
+    bonusCredits?: number;
+    resetCycle?: boolean;
+  }) =>
+    hxRequest<{ account: AiAccountState }>('/ai/admin/manage', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     }),
 };

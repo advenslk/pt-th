@@ -1,0 +1,480 @@
+{
+  "profiles": {
+    "1": {
+      "userId": "1",
+      "username": "admin",
+      "displayName": "HelzerX Owner",
+      "bio": "",
+      "avatarUrl": "",
+      "bannerUrl": "",
+      "socialLinks": {
+        "discord": "",
+        "github": "",
+        "website": "",
+        "twitter": ""
+      },
+      "isPublic": true,
+      "emailVerified": true,
+      "phoneNumber": "",
+      "phoneVerified": false,
+      "recoveryEmail": "owner@helzerx.local",
+      "lockdownMode": false,
+      "deactivationStatus": "active",
+      "following": [],
+      "followers": [],
+      "updatedAt": "2026-11-28T10:47:35.362Z"
+    }
+  },
+  "securityPolicies": {
+    "1": {
+      "loginOtpEnabled": false,
+      "emailLoginAlerts": true,
+      "newDeviceAlerts": true,
+      "ipLoginAlerts": false,
+      "suspiciousLoginProtection": true,
+      "loginAttemptLimit": 5,
+      "sessionTimeoutMinutes": 120,
+      "passwordExpiryDays": 0,
+      "captchaOnLogin": false,
+      "antiBotEnabled": true,
+      "securityQuestions": [],
+      "backupCodes": [
+        "84A4-039C",
+        "85AD-CB48",
+        "D488-FCE5",
+        "5702-5FA1",
+        "EB6D-4984",
+        "054B-EEA4"
+      ]
+    }
+  },
+  "devices": {
+    "1": [
+      {
+        "id": "dev_55d2b5fc4f70",
+        "label": "Current Browser Session",
+        "browser": "Chrome",
+        "os": "Android",
+        "ip": "103.21.165.10",
+        "trusted": true,
+        "current": true,
+        "lastSeenAt": "2026-11-28T10:47:35.363Z"
+      }
+    ]
+  },
+  "securityEvents": [],
+  "wallets": {
+    "1": 0
+  },
+  "transactions": [],
+  "invoices": [],
+  "coupons": [
+    {
+      "id": "cpn_welcome10",
+      "code": "WELCOME10",
+      "discountPercent": 10,
+      "creditBonus": 5,
+      "maxUses": 500,
+      "usedCount": 0,
+      "expiresAt": null,
+      "active": true,
+      "description": "New member $5.00 wallet credit + 10% plan discount"
+    },
+    {
+      "id": "cpn_helzer20",
+      "code": "HELZER20",
+      "discountPercent": 20,
+      "creditBonus": 0,
+      "maxUses": 200,
+      "usedCount": 0,
+      "expiresAt": null,
+      "active": true,
+      "description": "20% promotional discount on hosting upgrades"
+    }
+  ],
+  "couponRedemptions": {},
+  "paymentMethods": [],
+  "refunds": [],
+  "billingConfig": {
+    "taxRatePercent": 0,
+    "currency": "USD",
+    "enabledGateways": [
+      "Stripe",
+      "PayPal",
+      "PayHere",
+      "Manual Bank Transfer"
+    ],
+    "manualPaymentInstructions": "Transfer to HelzerX Hosting Ltd, reference your username, and submit the transaction ID below for admin verification."
+  },
+  "plans": [
+    {
+      "id": "plan_starter",
+      "name": "Starter Node",
+      "tagline": "Ideal for small PaperMC or Discord bot instances",
+      "category": "Game Servers",
+      "priceMonthly": 4.99,
+      "cpuLimit": 100,
+      "memoryMb": 2048,
+      "diskMb": 15360,
+      "backupsLimit": 2,
+      "databasesLimit": 1,
+      "egg": "PaperMC"
+    },
+    {
+      "id": "plan_pro",
+      "name": "Ryzen Boost 4G",
+      "tagline": "Balanced NVMe compute for active multiplayer communities",
+      "category": "Game Servers",
+      "priceMonthly": 9.99,
+      "cpuLimit": 200,
+      "memoryMb": 4096,
+      "diskMb": 35840,
+      "backupsLimit": 5,
+      "databasesLimit": 3,
+      "egg": "PaperMC / Fabric",
+      "popular": true
+    },
+    {
+      "id": "plan_app",
+      "name": "Runtime Container",
+      "tagline": "Dedicated Node.js, Python, or Go automation hosting",
+      "category": "Applications",
+      "priceMonthly": 6.5,
+      "cpuLimit": 150,
+      "memoryMb": 2048,
+      "diskMb": 20480,
+      "backupsLimit": 3,
+      "databasesLimit": 2,
+      "egg": "Node.js / Python"
+    },
+    {
+      "id": "plan_proxy",
+      "name": "Velocity Edge",
+      "tagline": "Low-latency network routing with DDoS protection",
+      "category": "Proxies",
+      "priceMonthly": 7.99,
+      "cpuLimit": 150,
+      "memoryMb": 2048,
+      "diskMb": 10240,
+      "backupsLimit": 3,
+      "databasesLimit": 1,
+      "egg": "Velocity"
+    }
+  ],
+  "loyalty": {
+    "1": {
+      "userId": "1",
+      "username": "admin",
+      "displayName": "HelzerX Owner",
+      "xp": 50,
+      "weeklyXp": 50,
+      "monthlyXp": 50,
+      "level": 1,
+      "points": 50,
+      "streakDays": 0,
+      "longestStreak": 0,
+      "lastDailyClaimAt": null,
+      "lastWeeklyClaimAt": null,
+      "lastMonthlyClaimAt": null,
+      "lastEventClaimAt": null,
+      "tier": "Standard",
+      "tierExpiresAt": null,
+      "birthdayMonthDay": "",
+      "referralCode": "HX-ADMIN1",
+      "referredBy": null,
+      "referralCount": 0,
+      "referralEarnings": 0,
+      "badges": [
+        "badge_pioneer"
+      ]
+    }
+  },
+  "rewardClaims": [],
+  "badgesCatalog": [
+    {
+      "id": "badge_pioneer",
+      "name": "HelzerX Pioneer",
+      "description": "Joined the HelzerX Control Panel platform",
+      "category": "Loyalty",
+      "xpReward": 50,
+      "rarity": "common"
+    },
+    {
+      "id": "badge_streak_7",
+      "name": "7-Day Streak",
+      "description": "Claimed daily check-in rewards 7 days in a row",
+      "category": "Loyalty",
+      "xpReward": 150,
+      "rarity": "rare"
+    },
+    {
+      "id": "badge_guardian",
+      "name": "Security Guardian",
+      "description": "Configured recovery email and security questions",
+      "category": "Security",
+      "xpReward": 100,
+      "rarity": "rare"
+    },
+    {
+      "id": "badge_community",
+      "name": "Community Contributor",
+      "description": "Published discussions or guides in the Community Forum",
+      "category": "Community",
+      "xpReward": 120,
+      "rarity": "epic"
+    },
+    {
+      "id": "badge_patron",
+      "name": "Cloud Patron",
+      "description": "Completed a wallet top-up or plan purchase",
+      "category": "Billing",
+      "xpReward": 200,
+      "rarity": "legendary"
+    }
+  ],
+  "shopItems": [
+    {
+      "id": "shop_credit_2",
+      "name": "$2.00 Wallet Credit",
+      "description": "Convert 200 Loyalty Points directly into spendable wallet balance.",
+      "costPoints": 200,
+      "type": "wallet_credit",
+      "value": 2,
+      "stock": 999
+    },
+    {
+      "id": "shop_credit_5",
+      "name": "$5.00 Wallet Credit",
+      "description": "Convert 450 Loyalty Points into $5.00 hosting wallet credit.",
+      "costPoints": 450,
+      "type": "wallet_credit",
+      "value": 5,
+      "stock": 999
+    },
+    {
+      "id": "shop_vip_30",
+      "name": "30 Days VIP Membership",
+      "description": "Unlock priority ticket routing, VIP badge, and 1.5x daily streak XP.",
+      "costPoints": 600,
+      "type": "vip_days",
+      "value": 30,
+      "stock": 100
+    },
+    {
+      "id": "shop_xp_boost",
+      "name": "+300 Bonus XP Pack",
+      "description": "Instant XP boost to advance your rank on the global leaderboard.",
+      "costPoints": 150,
+      "type": "xp_boost",
+      "value": 300,
+      "stock": 999
+    }
+  ],
+  "tickets": [],
+  "agents": [
+    {
+      "id": "agent_nethum",
+      "name": "Nethum",
+      "role": "Lead Infrastructure Engineer",
+      "department": "Node Infrastructure",
+      "online": true,
+      "resolvedCount": 142,
+      "avgRating": 4.9
+    },
+    {
+      "id": "agent_kavindu",
+      "name": "Kavindu",
+      "role": "Senior Support Specialist",
+      "department": "Technical Support",
+      "online": true,
+      "resolvedCount": 98,
+      "avgRating": 4.8
+    },
+    {
+      "id": "agent_billing",
+      "name": "HelzerX Billing Desk",
+      "role": "Accounts & Verification",
+      "department": "Billing & Renewals",
+      "online": true,
+      "resolvedCount": 76,
+      "avgRating": 4.9
+    }
+  ],
+  "templates": [
+    {
+      "id": "tpl_investigating",
+      "title": "Investigating Node Diagnostics",
+      "department": "Technical Support",
+      "body": "Thanks for reaching out. Our engineering team is checking your Wings daemon logs and node allocation metrics right now and will update you shortly."
+    },
+    {
+      "id": "tpl_payment_verified",
+      "title": "Manual Payment Approved",
+      "department": "Billing & Renewals",
+      "body": "We have verified your payment reference and credited your HelzerX wallet. Your updated receipt is now available under Billing > Invoices."
+    },
+    {
+      "id": "tpl_resolved",
+      "title": "Issue Resolved Confirmation",
+      "department": "Technical Support",
+      "body": "Glad we could help get this sorted! Feel free to rate this ticket or reopen it anytime if anything else comes up."
+    }
+  ],
+  "knowledgeBase": [
+    {
+      "id": "kb_sftp",
+      "title": "Connecting via SFTP & SSH Keys",
+      "category": "Getting Started",
+      "summary": "How to connect FileZilla or WinSCP using your SSH public key and server SFTP port.",
+      "content": "Open Account Settings -> SSH Keys to add your Ed25519 public key. Then open your server Settings page to copy the SFTP host and port (default 2022) and sign in with your panel username.",
+      "helpfulCount": 18,
+      "views": 124,
+      "updatedAt": "2026-11-28T10:47:35.360Z"
+    },
+    {
+      "id": "kb_2fa",
+      "title": "Securing Your Account with 2FA & Backup Codes",
+      "category": "Security",
+      "summary": "Best practices for TOTP authenticator apps, backup recovery codes, and API IP allowlists.",
+      "content": "Enable Two-Factor Authentication under Account Settings. Always store your backup recovery codes offline and restrict every Client API key to specific trusted IP addresses.",
+      "helpfulCount": 25,
+      "views": 192,
+      "updatedAt": "2026-11-28T10:47:35.360Z"
+    },
+    {
+      "id": "kb_eula",
+      "title": "Fixing Minecraft EULA & Startup Flags",
+      "category": "Troubleshooting",
+      "summary": "Why Minecraft servers stop on first boot and how to accept /eula.txt in one click.",
+      "content": "PaperMC and Vanilla servers require eula=true inside /eula.txt before starting. HelzerX automatically detects the EULA prompt in your console and lets you accept and boot immediately.",
+      "helpfulCount": 31,
+      "views": 260,
+      "updatedAt": "2026-11-28T10:47:35.360Z"
+    },
+    {
+      "id": "kb_wallet",
+      "title": "Using Wallet Credits, Coupons & Invoices",
+      "category": "Billing",
+      "summary": "How to top up your HelzerX wallet, apply promo codes, and download receipts.",
+      "content": "Visit Billing -> Overview & Wallet to top up funds or redeem a coupon code like WELCOME10. All completed transactions automatically generate tax-itemized invoices you can print or export.",
+      "helpfulCount": 14,
+      "views": 95,
+      "updatedAt": "2026-11-28T10:47:35.360Z"
+    }
+  ],
+  "posts": [
+    {
+      "id": "post_welcome",
+      "userId": "system",
+      "authorUsername": "helzerx",
+      "authorDisplayName": "HelzerX Team",
+      "authorAvatar": "",
+      "authorTier": "VIP",
+      "category": "General",
+      "title": "Welcome to the HelzerX Community Hub",
+      "body": "Share server setups, #optimization guides, plugin recommendations, and feature requests with fellow creators. Use #hashtags and @mentions in any discussion!",
+      "hashtags": [
+        "helzerx",
+        "optimization"
+      ],
+      "mentions": [],
+      "pinned": true,
+      "likes": [
+        "1"
+      ],
+      "dislikes": [],
+      "reactions": {
+        "🚀": [
+          "1"
+        ],
+        "🔥": [
+          "1"
+        ]
+      },
+      "bookmarks": [],
+      "views": 42,
+      "createdAt": "2026-11-28T10:47:35.360Z",
+      "comments": []
+    }
+  ],
+  "reports": [],
+  "announcements": [
+    {
+      "id": "ann_platform_launch",
+      "title": "HelzerX Platform Hub Now Live",
+      "category": "Release",
+      "priority": "high",
+      "targetAudience": "all",
+      "displayMode": "banner",
+      "pinned": true,
+      "archived": false,
+      "publishAt": "2026-11-28T10:47:35.360Z",
+      "expiresAt": null,
+      "body": "HelzerX now includes customizable dashboards, Wallet & Invoices, Rewards & Leaderboards, Support Attachments, Community Discussions, and real-time Notifications — with zero changes to server management speed.",
+      "author": "HelzerX Team",
+      "readBy": [],
+      "reactions": {
+        "🎉": []
+      },
+      "comments": [],
+      "createdAt": "2026-11-28T10:47:35.360Z"
+    }
+  ],
+  "incidents": [
+    {
+      "id": "inc_core",
+      "title": "All Core Services Operational",
+      "component": "Control Panel & Wings API",
+      "status": "operational",
+      "message": "Panel API, WebSocket console relays, billing bridge, and notification workers are healthy.",
+      "createdAt": "2026-11-28T10:47:35.360Z",
+      "resolvedAt": "2026-11-28T10:47:35.360Z"
+    }
+  ],
+  "notifications": [],
+  "notificationPrefs": {
+    "1": {
+      "browserEnabled": false,
+      "emailEnabled": true,
+      "soundEnabled": false,
+      "discordWebhookUrl": "",
+      "telegramBotToken": "",
+      "telegramChatId": "",
+      "quietHoursStart": "",
+      "quietHoursEnd": "",
+      "categories": {
+        "security": true,
+        "billing": true,
+        "support": true,
+        "community": true,
+        "announcement": true,
+        "reward": true
+      }
+    }
+  },
+  "globalServerLock": {
+    "locked": false,
+    "reason": "",
+    "lockedBy": "",
+    "lockedAt": null,
+    "stoppedCount": 0,
+    "stoppedIdentifiers": []
+  },
+  "aiAccounts": {
+    "1": {
+      "userId": "1",
+      "planId": "free",
+      "planName": "Free Starter",
+      "creditPercentCapacity": 10,
+      "monthlyCreditLimit": 100,
+      "creditsRemaining": 100,
+      "creditsUsed": 0,
+      "remainingPercentOfPlan": 100,
+      "remainingPercentOfMax": 10,
+      "resetAt": "2026-12-28T10:55:33.712Z",
+      "updatedAt": "2026-11-28T10:55:33.712Z"
+    }
+  },
+  "aiUsageHistory": [],
+  "aiChatMessages": {}
+}
