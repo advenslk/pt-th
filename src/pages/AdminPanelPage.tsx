@@ -1,5 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Activity, HardDrive, MapPin, Network, Server, Trash2, Users } from 'lucide-react';
+import {
+  Activity,
+  HardDrive,
+  MapPin,
+  Network,
+  Play,
+  Server,
+  ShieldAlert,
+  Skull,
+  Trash2,
+  Unlock,
+  Users,
+} from 'lucide-react';
 import { panelApi } from '../api/client';
 import { usePanel } from '../context/PanelContext';
 import type { AdminLocation, AdminNode, AdminUser, PterodactylServer } from '../types/panel';
@@ -16,7 +28,17 @@ const ADMIN_TABS = [
 ];
 
 export function AdminPanelPage({ initialSection = 'overview' }: { initialSection?: string }) {
-  const { navigate, refreshData, notify, panelConnected, connectionError } = usePanel();
+  const {
+    navigate,
+    refreshData,
+    notify,
+    panelConnected,
+    connectionError,
+    globalServerLock,
+    forceStopBusy,
+    forceStopAllServers,
+    resumeAllServers,
+  } = usePanel();
   const [tab, setTab] = useState(initialSection);
   const [stats, setStats] = useState({ totalUsers: 0, totalServers: 0, totalNodes: 0, totalAllocations: 0 });
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -27,6 +49,11 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
 
   const [newUserForm, setNewUserForm] = useState({ username: '', email: '', firstName: '', lastName: '', role: 'user' });
   const [newLocForm, setNewLocForm] = useState({ shortCode: '', description: '' });
+  const [lockReason, setLockReason] = useState(
+    'All servers force-stopped by administration. Starting servers is temporarily unavailable until an admin resumes them.'
+  );
+  const [stopSignal, setStopSignal] = useState<'kill' | 'stop'>('kill');
+  const [confirmForceStop, setConfirmForceStop] = useState(false);
 
   useEffect(() => {
     setTab(initialSection || 'overview');
@@ -94,6 +121,123 @@ export function AdminPanelPage({ initialSection = 'overview' }: { initialSection
       {adminError && (
         <div className="mx-card-3d p-5 rounded-2xl text-xs text-amber-700 dark:text-amber-400">
           {adminError}
+        </div>
+      )}
+
+      {(tab === 'overview' || tab === 'servers') && (
+        <div className="mx-card-3d p-5 rounded-2xl space-y-4 border border-rose-500/30">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-500 flex items-center justify-center shrink-0">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="mx-heading-3d text-sm font-bold text-[#171717] dark:text-white">
+                    Global Cluster Force Stop & Start Lock
+                  </h2>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                      globalServerLock?.locked
+                        ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                        : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                    }`}
+                  >
+                    {globalServerLock?.locked ? 'Locked for Users' : 'Unlocked'}
+                  </span>
+                </div>
+                <p className="text-xs text-[#777777] dark:text-zinc-400 mt-0.5">
+                  Stops every server across all nodes and blocks Start & Restart buttons for normal users until an admin resumes or starts servers again.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {globalServerLock?.locked && (
+                <>
+                  <button
+                    type="button"
+                    disabled={forceStopBusy}
+                    onClick={async () => {
+                      await resumeAllServers(true);
+                      loadAdmin();
+                    }}
+                    className="mx-btn-3d-success inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5" />
+                    {forceStopBusy ? 'Starting...' : 'Unlock & Start All'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={forceStopBusy}
+                    onClick={async () => {
+                      await resumeAllServers(false);
+                      loadAdmin();
+                    }}
+                    className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium disabled:opacity-50 cursor-pointer"
+                  >
+                    <Unlock className="w-3.5 h-3.5" />
+                    Unlock Users Only
+                  </button>
+                </>
+              )}
+
+              {!confirmForceStop ? (
+                <button
+                  type="button"
+                  disabled={forceStopBusy}
+                  onClick={() => setConfirmForceStop(true)}
+                  className="mx-btn-3d-danger inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 cursor-pointer"
+                >
+                  <Skull className="w-3.5 h-3.5" />
+                  Force Stop All Servers
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={forceStopBusy}
+                    onClick={() => setConfirmForceStop(false)}
+                    className="mx-btn-3d px-3 py-2 rounded-xl text-xs cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={forceStopBusy}
+                    onClick={async () => {
+                      await forceStopAllServers(lockReason, stopSignal);
+                      setConfirmForceStop(false);
+                      loadAdmin();
+                    }}
+                    className="mx-btn-3d-danger inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 cursor-pointer"
+                  >
+                    <Skull className="w-3.5 h-3.5" />
+                    {forceStopBusy ? 'Stopping Nodes...' : 'Confirm Stop All Nodes'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+            <select
+              aria-label="Stop signal mode"
+              value={stopSignal}
+              onChange={(e) => setStopSignal(e.target.value as 'kill' | 'stop')}
+              className="mx-input-3d px-3 py-2 rounded-xl text-xs cursor-pointer"
+            >
+              <option value="kill">Force Kill (All Nodes)</option>
+              <option value="stop">Graceful Stop (All Nodes)</option>
+            </select>
+            <input
+              type="text"
+              value={lockReason}
+              onChange={(e) => setLockReason(e.target.value)}
+              placeholder="Lock notice displayed to users..."
+              className="mx-input-3d sm:col-span-3 px-3 py-2 rounded-xl text-xs"
+            />
+          </div>
         </div>
       )}
 

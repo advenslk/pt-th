@@ -77,4 +77,8 @@ Route::prefix('helzerx')->group(function () {
     Route::post('/notifications/{id}/read', [HelzerxController::class, 'readNotification']);
     Route::put('/notifications/preferences', [HelzerxController::class, 'updateNotificationPrefs']);
     Route::post('/notifications/test-webhook', [HelzerxController::class, 'testWebhook']);
+
+    // Admin global force-stop & start lock
+    Route::post('/admin/force-stop-all', [HelzerxController::class, 'forceStopAllServers']);
+    Route::post('/admin/resume-all', [HelzerxController::class, 'resumeAllServers']);
 });

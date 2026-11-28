@@ -8,6 +8,7 @@ import {
   Copy,
   Download,
   ExternalLink,
+  Lock,
   Maximize2,
   Minimize2,
   Play,
@@ -43,7 +44,17 @@ function classifyLine(plain: string, eventName: string): ConsoleLine['level'] {
 }
 
 export function ServerConsolePage({ serverId }: { serverId: string }) {
-  const { servers, sendPower, refreshData, notify, navigate, panelConnected, connectionError } = usePanel();
+  const {
+    servers,
+    sendPower,
+    refreshData,
+    notify,
+    navigate,
+    panelConnected,
+    connectionError,
+    globalServerLock,
+    serversStartLockedForUser,
+  } = usePanel();
   const server = servers.find((s) => s.id === serverId || s.identifier === serverId) || servers[0];
 
   const [liveStatus, setLiveStatus] = useState<ServerStatus>(server?.status || 'offline');
@@ -292,6 +303,14 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
   }
 
   const dispatchPower = async (signal: PowerSignal) => {
+    if (serversStartLockedForUser && (signal === 'start' || signal === 'restart')) {
+      notify(
+        'Server Start Unavailable',
+        globalServerLock?.reason || 'Servers were force-stopped by administration.',
+        'error'
+      );
+      return;
+    }
     try {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ event: 'set state', args: [signal] }));
@@ -326,7 +345,7 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
       appendConsoleLines('[HelzerX]: Updated /eula.txt (eula=true).', 'daemon message');
       notify('Minecraft EULA accepted', 'Saved eula=true to /eula.txt', 'success');
 
-      if (shouldStart) {
+      if (shouldStart && !serversStartLockedForUser) {
         await dispatchPower(liveStatus === 'offline' ? 'start' : 'restart');
       }
     } catch (err: any) {
@@ -491,18 +510,39 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             type="button"
-            disabled={liveStatus === 'running' || liveStatus === 'starting' || Boolean(server.isSuspended) || isInstalling}
+            disabled={
+              serversStartLockedForUser ||
+              liveStatus === 'running' ||
+              liveStatus === 'starting' ||
+              Boolean(server.isSuspended) ||
+              isInstalling
+            }
+            title={
+              serversStartLockedForUser
+                ? 'Start is locked by administration until an admin starts or unlocks servers'
+                : undefined
+            }
             onClick={() => dispatchPower('start')}
-            className="mx-btn-3d-success inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium disabled:opacity-40 whitespace-nowrap shrink-0 cursor-pointer"
+            className="mx-btn-3d-success inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <Play className="w-3.5 h-3.5" />
-            Start
+            {serversStartLockedForUser ? <Lock className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+            {serversStartLockedForUser ? 'Start Locked' : 'Start'}
           </button>
           <button
             type="button"
-            disabled={liveStatus === 'offline' || Boolean(server.isSuspended) || isInstalling}
+            disabled={
+              serversStartLockedForUser ||
+              liveStatus === 'offline' ||
+              Boolean(server.isSuspended) ||
+              isInstalling
+            }
+            title={
+              serversStartLockedForUser
+                ? 'Restart is locked by administration until an admin starts or unlocks servers'
+                : undefined
+            }
             onClick={() => dispatchPower('restart')}
-            className="mx-btn-3d inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium disabled:opacity-40 whitespace-nowrap shrink-0 cursor-pointer"
+            className="mx-btn-3d inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shrink-0 cursor-pointer"
           >
             <RotateCw className="w-3.5 h-3.5" />
             Restart
@@ -527,6 +567,19 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
           </button>
         </div>
       </div>
+
+      {serversStartLockedForUser && (
+        <div className="mx-card-3d p-4 rounded-2xl border border-rose-500/45 bg-rose-500/10 flex items-center gap-3 text-xs">
+          <Lock className="w-5 h-5 text-rose-500 shrink-0" />
+          <div className="text-[#171717] dark:text-zinc-100">
+            <span className="font-bold text-rose-600 dark:text-rose-400 mr-1.5">
+              Start & Restart Unavailable:
+            </span>
+            {globalServerLock?.reason ||
+              'All servers were force-stopped by administration. Starting servers is disabled until an administrator resumes them.'}
+          </div>
+        </div>
+      )}
 
       {/* Lifecycle Notices (Suspended / Installing / Transferring) */}
       {(server.isSuspended || isInstalling || server.isTransferring) && (
@@ -560,11 +613,15 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
             <button
               type="button"
               disabled={acceptingEula}
-              onClick={() => handleAcceptEula(true)}
+              onClick={() => handleAcceptEula(!serversStartLockedForUser)}
               className="mx-btn-3d-success inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium cursor-pointer"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              {acceptingEula ? 'Applying...' : 'Accept EULA & Start'}
+              {acceptingEula
+                ? 'Applying...'
+                : serversStartLockedForUser
+                  ? 'Accept EULA Only (Start Locked)'
+                  : 'Accept EULA & Start'}
             </button>
           </div>
         </div>
@@ -630,10 +687,14 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
               <button
                 type="button"
                 disabled={acceptingEula}
-                onClick={() => handleAcceptEula(true)}
+                onClick={() => handleAcceptEula(!serversStartLockedForUser)}
                 className="mx-btn-3d-primary px-4 py-2 rounded-xl text-xs font-medium disabled:opacity-50 cursor-pointer"
               >
-                {acceptingEula ? 'Writing eula.txt...' : 'I Accept & Start'}
+                {acceptingEula
+                  ? 'Writing eula.txt...'
+                  : serversStartLockedForUser
+                    ? 'I Accept (Start Locked)'
+                    : 'I Accept & Start'}
               </button>
             </div>
           </div>
@@ -834,11 +895,12 @@ export function ServerConsolePage({ serverId }: { serverId: string }) {
               {liveStatus === 'offline' && logs.length === 0 && (
                 <button
                   type="button"
+                  disabled={serversStartLockedForUser}
                   onClick={() => dispatchPower('start')}
-                  className="mx-btn-3d-success inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-sans font-medium cursor-pointer mt-1"
+                  className="mx-btn-3d-success inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-sans font-medium disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer mt-1"
                 >
-                  <Play className="w-3 h-3" />
-                  Start Server
+                  {serversStartLockedForUser ? <Lock className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                  {serversStartLockedForUser ? 'Start Unavailable (Locked by Admin)' : 'Start Server'}
                 </button>
               )}
             </div>

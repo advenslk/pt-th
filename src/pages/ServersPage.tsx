@@ -1,14 +1,22 @@
 import { useMemo, useState } from 'react';
 import {
+  Boxes,
   FolderOpen,
   LayoutGrid,
   List,
+  Lock,
   Play,
+  Puzzle,
   RotateCw,
   Search,
+  ShieldAlert,
+  Skull,
   Square,
   Star,
   TerminalSquare,
+  Unlock,
+  UserCheck,
+  X,
   Zap,
 } from 'lucide-react';
 import { usePanel } from '../context/PanelContext';
@@ -31,12 +39,22 @@ export function ServersPage() {
     connectionError,
     showOtherServers,
     setShowOtherServers,
+    globalServerLock,
+    serversStartLockedForUser,
+    forceStopBusy,
+    forceStopAllServers,
+    resumeAllServers,
   } = usePanel();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | ServerStatus | 'favorites'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | ServerCategory>('all');
   const [sortBy, setSortBy] = useState<SortKey>('name');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [forceStopModalOpen, setForceStopModalOpen] = useState(false);
+  const [forceStopReason, setForceStopReason] = useState(
+    'All servers force-stopped by administration. Starting servers is temporarily unavailable until an admin resumes them.'
+  );
+  const [forceStopSignal, setForceStopSignal] = useState<'kill' | 'stop'>('kill');
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -80,7 +98,42 @@ export function ServersPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {user?.role === 'admin' && (
+            <>
+              {globalServerLock?.locked && (
+                <>
+                  <button
+                    type="button"
+                    disabled={forceStopBusy}
+                    onClick={() => resumeAllServers(true)}
+                    className="mx-btn-3d-success inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium disabled:opacity-50 cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5" />
+                    {forceStopBusy ? 'Working...' : 'Start & Unlock All'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={forceStopBusy}
+                    onClick={() => resumeAllServers(false)}
+                    className="mx-btn-3d inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium disabled:opacity-50 cursor-pointer"
+                  >
+                    <Unlock className="w-3.5 h-3.5" />
+                    Unlock Users
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                disabled={forceStopBusy}
+                onClick={() => setForceStopModalOpen(true)}
+                className="mx-btn-3d-danger inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-50 cursor-pointer"
+              >
+                <Skull className="w-3.5 h-3.5" />
+                Force Stop All
+              </button>
+            </>
+          )}
           <button
             type="button"
             onClick={() => navigate({ page: 'optimize' })}
@@ -291,6 +344,33 @@ export function ServersPage() {
                       </div>
                     </div>
                   </div>
+
+                  <div className="mt-3 grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => navigate({ page: 'server-plugins', serverId: srv.id })}
+                      className="mx-btn-3d inline-flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl text-[11px] font-medium cursor-pointer"
+                    >
+                      <Puzzle className="w-3 h-3 text-[#8B5CF6]" />
+                      <span>Plugins</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate({ page: 'server-mods', serverId: srv.id })}
+                      className="mx-btn-3d inline-flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl text-[11px] font-medium cursor-pointer"
+                    >
+                      <Boxes className="w-3 h-3 text-[#06B6D4]" />
+                      <span>Mods</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate({ page: 'server-players', serverId: srv.id })}
+                      className="mx-btn-3d inline-flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl text-[11px] font-medium cursor-pointer"
+                    >
+                      <UserCheck className="w-3 h-3 text-emerald-500" />
+                      <span>Players</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-4 pt-3.5 border-t border-black/[0.06] dark:border-white/[0.06] flex items-center justify-between gap-2">
@@ -301,19 +381,37 @@ export function ServersPage() {
                     {srv.status === 'offline' ? (
                       <button
                         type="button"
-                        title="Start"
+                        disabled={serversStartLockedForUser}
+                        title={
+                          serversStartLockedForUser
+                            ? 'Start unavailable: locked by administration until an admin resumes servers'
+                            : 'Start'
+                        }
                         onClick={() => sendPower(srv.id, 'start')}
-                        className="mx-btn-3d-success p-1.5 rounded-lg cursor-pointer"
+                        className={
+                          serversStartLockedForUser
+                            ? 'mx-btn-3d p-1.5 rounded-lg opacity-45 cursor-not-allowed text-rose-500'
+                            : 'mx-btn-3d-success p-1.5 rounded-lg cursor-pointer'
+                        }
                       >
-                        <Play className="w-3.5 h-3.5" />
+                        {serversStartLockedForUser ? (
+                          <Lock className="w-3.5 h-3.5" />
+                        ) : (
+                          <Play className="w-3.5 h-3.5" />
+                        )}
                       </button>
                     ) : (
                       <>
                         <button
                           type="button"
-                          title="Restart"
+                          disabled={serversStartLockedForUser}
+                          title={
+                            serversStartLockedForUser
+                              ? 'Restart unavailable: locked by administration until an admin resumes servers'
+                              : 'Restart'
+                          }
                           onClick={() => sendPower(srv.id, 'restart')}
-                          className="mx-btn-3d p-1.5 rounded-lg cursor-pointer"
+                          className="mx-btn-3d p-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                         >
                           <RotateCw className="w-3.5 h-3.5" />
                         </button>
@@ -437,6 +535,95 @@ export function ServersPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {forceStopModalOpen && user?.role === 'admin' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          onClick={() => !forceStopBusy && setForceStopModalOpen(false)}
+        >
+          <div
+            className="mx-card-3d w-full max-w-md p-6 rounded-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-rose-500/15 text-rose-500 flex items-center justify-center shrink-0">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="mx-heading-3d text-base font-bold text-[#171717] dark:text-white">
+                    Force Stop All Servers
+                  </h2>
+                  <p className="text-[11px] text-[#777777] dark:text-zinc-400">
+                    Stops every server across all nodes & locks user start controls
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={forceStopBusy}
+                onClick={() => setForceStopModalOpen(false)}
+                className="mx-btn-3d p-1.5 rounded-lg cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-medium text-[#525252] dark:text-zinc-300 mb-1">
+                  Stop Signal Mode
+                </label>
+                <select
+                  value={forceStopSignal}
+                  onChange={(e) => setForceStopSignal(e.target.value as 'kill' | 'stop')}
+                  className="mx-input-3d w-full px-3 py-2 rounded-xl text-xs cursor-pointer"
+                >
+                  <option value="kill">Immediate Force Kill (kill, fallback stop)</option>
+                  <option value="stop">Graceful Stop (stop)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-[#525252] dark:text-zinc-300 mb-1">
+                  Notice Shown to Normal Users
+                </label>
+                <textarea
+                  rows={3}
+                  value={forceStopReason}
+                  onChange={(e) => setForceStopReason(e.target.value)}
+                  className="mx-input-3d w-full px-3 py-2 rounded-xl text-xs resize-none"
+                />
+              </div>
+              <p className="text-[11px] text-rose-600 dark:text-rose-400">
+                Normal users will not be able to Start or Restart any server until an Administrator unlocks or starts servers again.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={forceStopBusy}
+                onClick={() => setForceStopModalOpen(false)}
+                className="mx-btn-3d px-4 py-2 rounded-xl text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={forceStopBusy}
+                onClick={async () => {
+                  await forceStopAllServers(forceStopReason, forceStopSignal);
+                  setForceStopModalOpen(false);
+                }}
+                className="mx-btn-3d-danger inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 cursor-pointer"
+              >
+                <Skull className="w-3.5 h-3.5" />
+                {forceStopBusy ? 'Stopping All Nodes...' : 'Confirm Force Stop All'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -29,10 +29,12 @@ import {
   Server,
   Settings,
   Shield,
+  ShieldAlert,
   SlidersHorizontal,
   Star,
   Sun,
   TerminalSquare,
+  Unlock,
   User,
   UserCheck,
   Users,
@@ -83,6 +85,10 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
     dismissedAnnouncements,
     dismissAnnouncement,
     autoOptimizeSettings,
+    globalServerLock,
+    serversStartLockedForUser,
+    forceStopBusy,
+    resumeAllServers,
   } = usePanel();
 
   const [treeSearch, setTreeSearch] = useState('');
@@ -941,6 +947,48 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
 
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-7">
             <div className="max-w-[1360px] mx-auto space-y-5">
+              {globalServerLock?.locked && (
+                <div className="mx-card-3d px-4 py-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-rose-500/45 bg-rose-500/10">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <ShieldAlert className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                    <div className="min-w-0 text-xs">
+                      <div className="font-bold text-rose-600 dark:text-rose-400">
+                        {user?.role === 'admin'
+                          ? `All Servers Force-Stopped (${globalServerLock.stoppedCount} stopped) — User Start Locked`
+                          : 'Server Start Unavailable — Global Maintenance Lock Active'}
+                      </div>
+                      <p className="text-[#525252] dark:text-zinc-300 mt-0.5">
+                        {globalServerLock.reason}
+                        {serversStartLockedForUser
+                          ? ' Start and restart actions are disabled until an administrator resumes servers.'
+                          : ''}
+                      </p>
+                    </div>
+                  </div>
+                  {user?.role === 'admin' && (
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        disabled={forceStopBusy}
+                        onClick={() => resumeAllServers(true)}
+                        className="mx-btn-3d-success inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium disabled:opacity-50 cursor-pointer"
+                      >
+                        <Play className="w-3.5 h-3.5" />
+                        {forceStopBusy ? 'Working...' : 'Unlock & Start All'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={forceStopBusy}
+                        onClick={() => resumeAllServers(false)}
+                        className="mx-btn-3d inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium disabled:opacity-50 cursor-pointer"
+                      >
+                        <Unlock className="w-3.5 h-3.5" />
+                        Unlock Users
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               {bannerAnnouncements.length > 0 && (
                 <div className="mx-card-3d px-4 py-3 rounded-2xl flex items-center justify-between gap-3 border border-[#8B5CF6]/30">
                   <div className="flex items-center gap-3 min-w-0">

@@ -5,6 +5,7 @@ import type {
   BillingOverviewResponse,
   CommunityPost,
   ExtendedProfile,
+  GlobalServerLockState,
   HelzerxBootstrapResponse,
   HelzerxCoupon,
   KnowledgeArticle,
@@ -394,4 +395,26 @@ export const helzerxApi = {
     }),
 
   testWebhook: () => hxRequest<{ ok: boolean }>('/notifications/test-webhook', { method: 'POST' }),
+
+  // Admin Global Force-Stop & Start Lock
+  forceStopAllServers: (payload?: { reason?: string; signal?: 'kill' | 'stop' }) =>
+    hxRequest<{
+      globalServerLock: GlobalServerLockState;
+      totalTargeted: number;
+      stoppedCount: number;
+      failedCount: number;
+    }>('/admin/force-stop-all', {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    }),
+
+  resumeAllServers: (payload?: { startServers?: boolean; targetIdentifiers?: string[] }) =>
+    hxRequest<{
+      globalServerLock: GlobalServerLockState;
+      startedCount: number;
+      failedCount: number;
+    }>('/admin/resume-all', {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    }),
 };

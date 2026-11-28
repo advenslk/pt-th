@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { createHelzerxRouter } from './server/helzerxRouter';
+import { createHelzerxRouter, isGlobalServerLocked, resolveHelzerxUser } from './server/helzerxRouter';
 
 dotenv.config();
 
@@ -147,6 +147,21 @@ async function startServer() {
 
   // HelzerX Platform Features API (must be registered before Pterodactyl client proxy)
   app.use('/api/client/helzerx', createHelzerxRouter());
+
+  // Enforce global admin server-start lock for non-admin users
+  app.post('/api/client/servers/:id/power', async (req, res, next) => {
+    const signal = String(req.body?.signal || '').toLowerCase();
+    if ((signal === 'start' || signal === 'restart') && isGlobalServerLocked()) {
+      const user = await resolveHelzerxUser(req);
+      if (!user.isAdmin) {
+        return res.status(423).json({
+          error: 'GLOBAL_SERVER_LOCK',
+          message: 'Server start is currently locked by Administration until servers are resumed.',
+        });
+      }
+    }
+    return next();
+  });
 
   // Authentic Pterodactyl Client API Proxy
   app.all('/api/client*', (req, res) => proxyToPterodactyl(req, res, false));

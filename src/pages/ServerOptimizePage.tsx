@@ -84,6 +84,7 @@ export function ServerOptimizePage({ serverId }: { serverId?: string }) {
     appendOptimizeLog,
     clearOptimizeHistory,
     isAutoOptimizing,
+    serversStartLockedForUser,
   } = usePanel();
 
   const [tab, setTab] = useState<OptimizerTab>(serverId ? 'single' : 'fleet');
@@ -186,9 +187,8 @@ export function ServerOptimizePage({ serverId }: { serverId?: string }) {
   const handleRunManualOptimize = async (quickPreset?: OptimizePreset) => {
     if (!targetServer) return;
     setRunningManual(true);
-    const optsToRun = quickPreset
-      ? { ...manualOpts, preset: quickPreset }
-      : manualOpts;
+    const baseOpts = quickPreset ? { ...manualOpts, preset: quickPreset } : manualOpts;
+    const optsToRun = serversStartLockedForUser ? { ...baseOpts, restartAfter: false } : baseOpts;
     try {
       const log = await optimizeServer(targetServer, optsToRun, 'manual', (msg) =>
         setStepMessage(msg)
@@ -229,7 +229,10 @@ export function ServerOptimizePage({ serverId }: { serverId?: string }) {
       for (let i = 0; i < targets.length; i++) {
         const srv = targets[i];
         setBatchProgress({ done: i, total: targets.length, current: srv.name });
-        const log = await optimizeServer(srv, manualOpts, 'batch');
+        const batchOpts = serversStartLockedForUser
+          ? { ...manualOpts, restartAfter: false }
+          : manualOpts;
+        const log = await optimizeServer(srv, batchOpts, 'batch');
         appendOptimizeLog(log);
         totalFreed += log.freedBytes;
         if (log.status === 'optimized') optimizedCount++;
@@ -596,14 +599,18 @@ export function ServerOptimizePage({ serverId }: { serverId?: string }) {
                       },
                     ].map((opt) => {
                       const Icon = opt.icon;
-                      const checked = manualOpts[opt.key];
+                      const isRestartLocked = opt.key === 'restartAfter' && serversStartLockedForUser;
+                      const checked = isRestartLocked ? false : manualOpts[opt.key];
                       return (
                         <label
                           key={opt.key}
-                          className="mx-well-3d flex items-start gap-3 p-3 rounded-xl cursor-pointer"
+                          className={`mx-well-3d flex items-start gap-3 p-3 rounded-xl ${
+                            isRestartLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                          }`}
                         >
                           <input
                             type="checkbox"
+                            disabled={isRestartLocked}
                             checked={checked}
                             onChange={(e) =>
                               setManualOpts((prev) => ({
@@ -611,12 +618,17 @@ export function ServerOptimizePage({ serverId }: { serverId?: string }) {
                                 [opt.key]: e.target.checked,
                               }))
                             }
-                            className="mt-0.5 accent-[#8B5CF6] cursor-pointer"
+                            className="mt-0.5 accent-[#8B5CF6] cursor-pointer disabled:cursor-not-allowed"
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 text-xs font-semibold text-[#171717] dark:text-zinc-100">
                               <Icon className="w-3.5 h-3.5 text-[#8B5CF6]" />
                               {opt.title}
+                              {isRestartLocked && (
+                                <span className="text-[10px] font-semibold text-rose-500">
+                                  (Locked by Admin)
+                                </span>
+                              )}
                             </div>
                             <p className="text-[11px] text-[#777777] dark:text-zinc-400 mt-0.5">
                               {opt.desc}

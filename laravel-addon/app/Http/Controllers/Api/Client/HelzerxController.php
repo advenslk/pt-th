@@ -562,6 +562,16 @@ class HelzerxController extends Controller
 
         $txs = DB::table('helzerx_wallet_transactions')->where('user_id', $uid)->orderByDesc('created_at')->limit(5)->get()->map(fn ($t) => $this->formatTx($t))->values()->all();
 
+        $defaultLock = [
+            'locked' => false,
+            'reason' => '',
+            'lockedBy' => '',
+            'lockedAt' => null,
+            'stoppedCount' => 0,
+            'stoppedIdentifiers' => [],
+        ];
+        $globalLock = $this->getStore('global_server_lock', $defaultLock);
+
         return response()->json([
             'userId' => (string) $uid,
             'username' => $u->username,
@@ -578,6 +588,7 @@ class HelzerxController extends Controller
             'activeAnnouncements' => $announcements,
             'incidents' => $incidents,
             'recentTransactions' => $txs,
+            'globalServerLock' => $globalLock,
         ]);
     }
 
@@ -1778,5 +1789,116 @@ class HelzerxController extends Controller
         }
         $this->dispatchWebhooks($prefs, 'HelzerX Notification Test', "Test alert triggered by {$u->username} at " . Carbon::now()->toDateTimeString());
         return response()->json(['ok' => true]);
+    }
+
+    public function forceStopAllServers(Request $request): JsonResponse
+    {
+        $u = $this->ensureUser($request);
+        if (!$u->root_admin) {
+            return response()->json(['error' => 'Administrator permission required.'], 403);
+        }
+
+        $signal = $request->input('signal') === 'stop' ? 'stop' : 'kill';
+        $reason = substr((string) $request->input('reason', 'Emergency force-stop triggered by Administration.'), 0, 240);
+
+        $totalTargeted = 0;
+        $stoppedCount = 0;
+        $failedCount = 0;
+        $stoppedIdentifiers = [];
+
+        if (class_exists(\Pterodactyl\Models\Server::class) && class_exists(\Pterodactyl\Repositories\Wings\DaemonPowerRepository::class)) {
+            $powerRepo = app(\Pterodactyl\Repositories\Wings\DaemonPowerRepository::class);
+            \Pterodactyl\Models\Server::with('node')->chunk(50, function ($servers) use ($powerRepo, $signal, &$totalTargeted, &$stoppedCount, &$failedCount, &$stoppedIdentifiers) {
+                foreach ($servers as $srv) {
+                    $totalTargeted++;
+                    try {
+                        $powerRepo->setServer($srv)->send($signal);
+                        $stoppedCount++;
+                        $stoppedIdentifiers[] = $srv->uuidShort;
+                    } catch (\Throwable $e) {
+                        if ($signal === 'kill') {
+                            try {
+                                $powerRepo->setServer($srv)->send('stop');
+                                $stoppedCount++;
+                                $stoppedIdentifiers[] = $srv->uuidShort;
+                                continue;
+                            } catch (\Throwable $e2) {
+                            }
+                        }
+                        $failedCount++;
+                    }
+                }
+            });
+        }
+
+        $lockState = [
+            'locked' => true,
+            'reason' => $reason,
+            'lockedBy' => $u->username,
+            'lockedAt' => $this->nowIso(),
+            'stoppedCount' => $stoppedCount,
+            'stoppedIdentifiers' => $stoppedIdentifiers,
+        ];
+        $this->setStore('global_server_lock', $lockState);
+
+        return response()->json([
+            'globalServerLock' => $lockState,
+            'totalTargeted' => $totalTargeted,
+            'stoppedCount' => $stoppedCount,
+            'failedCount' => $failedCount,
+        ]);
+    }
+
+    public function resumeAllServers(Request $request): JsonResponse
+    {
+        $u = $this->ensureUser($request);
+        if (!$u->root_admin) {
+            return response()->json(['error' => 'Administrator permission required.'], 403);
+        }
+
+        $startServers = (bool) $request->input('startServers', false);
+        $currentLock = $this->getStore('global_server_lock', ['stoppedIdentifiers' => []]);
+        $prevIds = is_array($currentLock['stoppedIdentifiers'] ?? null) ? $currentLock['stoppedIdentifiers'] : [];
+
+        $startedCount = 0;
+        $failedCount = 0;
+
+        if ($startServers && class_exists(\Pterodactyl\Models\Server::class) && class_exists(\Pterodactyl\Repositories\Wings\DaemonPowerRepository::class)) {
+            $powerRepo = app(\Pterodactyl\Repositories\Wings\DaemonPowerRepository::class);
+            $requested = $request->input('targetIdentifiers');
+            $targetList = is_array($requested) && count($requested) > 0 ? $requested : $prevIds;
+
+            $query = \Pterodactyl\Models\Server::with('node');
+            if (count($targetList) > 0) {
+                $query->whereIn('uuidShort', $targetList);
+            }
+
+            $query->chunk(50, function ($servers) use ($powerRepo, &$startedCount, &$failedCount) {
+                foreach ($servers as $srv) {
+                    try {
+                        $powerRepo->setServer($srv)->send('start');
+                        $startedCount++;
+                    } catch (\Throwable $e) {
+                        $failedCount++;
+                    }
+                }
+            });
+        }
+
+        $unlocked = [
+            'locked' => false,
+            'reason' => '',
+            'lockedBy' => '',
+            'lockedAt' => null,
+            'stoppedCount' => 0,
+            'stoppedIdentifiers' => [],
+        ];
+        $this->setStore('global_server_lock', $unlocked);
+
+        return response()->json([
+            'globalServerLock' => $unlocked,
+            'startedCount' => $startedCount,
+            'failedCount' => $failedCount,
+        ]);
     }
 }
