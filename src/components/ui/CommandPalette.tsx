@@ -166,11 +166,21 @@ export function CommandPalette() {
       {
         id: 'page:billing',
         group: 'Pages',
-        label: 'Billing & Hosting',
-        subtitle: 'Invoices, plans & balance',
+        label: user?.role === 'admin' ? 'Billing & Hosting' : 'Billing & Hosting (Not yet ready)',
+        subtitle:
+          user?.role === 'admin'
+            ? 'Invoices, plans & balance'
+            : 'Blocked — Not yet ready for user accounts',
         keywords: 'billing wallet invoices plans payment',
         icon: CreditCard,
-        onSelect: () => go({ page: 'billing' }),
+        onSelect: () => {
+          if (user?.role === 'admin') {
+            go({ page: 'billing' });
+          } else {
+            notify('Billing is not yet ready', 'This section is currently locked.', 'error');
+            setCommandPaletteOpen(false);
+          }
+        },
       },
       {
         id: 'page:support',

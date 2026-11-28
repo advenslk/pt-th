@@ -14,6 +14,7 @@ import {
   FolderOpen,
   Home,
   LifeBuoy,
+  Lock,
   LogOut,
   Megaphone,
   Menu,
@@ -476,12 +477,32 @@ export function MidnightShell({ children }: { children: React.ReactNode }) {
             {t('nav.platform')}
           </div>
           <div className="space-y-1">
-            <NavRow
-              label={t('nav.billing')}
-              icon={CreditCard}
-              active={route.page === 'billing'}
-              onClick={() => navigate({ page: 'billing' })}
-            />
+            {user?.role === 'admin' ? (
+              <NavRow
+                label={t('nav.billing')}
+                icon={CreditCard}
+                active={route.page === 'billing'}
+                onClick={() => navigate({ page: 'billing' })}
+              />
+            ) : (
+              <button
+                type="button"
+                aria-disabled="true"
+                title="Billing is not yet ready"
+                onClick={() =>
+                  notify('Billing is not yet ready', 'This section is currently locked for maintenance.', 'error')
+                }
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-[13px] font-medium border border-rose-500/35 bg-rose-500/10 text-rose-600 dark:text-rose-400 cursor-not-allowed opacity-90"
+              >
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <Lock className="w-4 h-4 shrink-0 text-rose-500 dark:text-rose-400" />
+                  <span className="truncate line-through decoration-rose-500/60">{t('nav.billing')}</span>
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30 shrink-0">
+                  Not yet ready
+                </span>
+              </button>
+            )}
             <NavRow
               label={t('nav.support')}
               icon={LifeBuoy}

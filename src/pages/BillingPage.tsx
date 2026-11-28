@@ -6,6 +6,7 @@ import {
   Download,
   FileText,
   Gift,
+  Lock,
   Plus,
   Printer,
   Receipt,
@@ -27,8 +28,8 @@ import { formatDate, formatMb, formatRelativeTime } from '../utils/format';
 type BillingTab = 'wallet' | 'plans' | 'invoices' | 'methods' | 'admin';
 
 export function BillingPage() {
-  const { user, helzerxData, notify, refreshHelzerx } = usePanel();
-  const isAdmin = Boolean(helzerxData?.isAdmin || user?.role === 'admin');
+  const { user, navigate, notify, refreshHelzerx } = usePanel();
+  const isAdmin = user?.role === 'admin';
 
   const [data, setData] = useState<BillingOverviewResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,6 +68,10 @@ export function BillingPage() {
   const [adminRefundNotes, setAdminRefundNotes] = useState<Record<string, string>>({});
 
   const loadBilling = useCallback(async () => {
+    if (!isAdmin) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await helzerxApi.getBilling();
       setData(res);
@@ -80,11 +85,39 @@ export function BillingPage() {
     } finally {
       setLoading(false);
     }
-  }, [notify, fundMethod]);
+  }, [isAdmin, notify, fundMethod]);
 
   useEffect(() => {
     loadBilling();
   }, [loadBilling]);
+
+  if (!isAdmin) {
+    return (
+      <div className="mx-card-3d p-8 sm:p-10 rounded-2xl border border-rose-500/35 bg-rose-500/[0.06] max-w-xl mx-auto text-center space-y-4">
+        <div className="mx-well-3d w-14 h-14 rounded-2xl mx-auto flex items-center justify-center border border-rose-500/30 bg-rose-500/15">
+          <Lock className="w-6 h-6 text-rose-500" />
+        </div>
+        <div className="space-y-1.5">
+          <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30">
+            Not yet ready
+          </span>
+          <h1 className="mx-heading-3d text-lg sm:text-xl font-bold text-[#171717] dark:text-white">
+            Billing Module Locked
+          </h1>
+          <p className="text-xs sm:text-sm text-[#525252] dark:text-zinc-300 leading-relaxed">
+            The Billing &amp; Wallet section is not yet ready for user accounts. Only administrators can access this area during setup.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate({ page: 'dashboard' })}
+          className="mx-btn-3d-primary px-5 py-2 rounded-xl text-xs font-semibold cursor-pointer"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+    );
+  }
 
   const handleAddFunds = async (e: React.FormEvent) => {
     e.preventDefault();

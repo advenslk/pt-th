@@ -209,11 +209,42 @@ export const panelApi = {
       panelVersion: string;
     }>('/api/health'),
 
-  getClientServers: async (): Promise<PterodactylServer[]> => {
+  getClientServers: async (showOtherServers = false): Promise<PterodactylServer[]> => {
     const listRes = await jsonRequest<{ data: any[] }>('/api/client?include=allocations');
-    const items = listRes.data || [];
+    const ownItems = listRes.data || [];
+
+    let combinedItems = ownItems;
+    if (showOtherServers) {
+      let adminItems: any[] = [];
+      try {
+        const adminRes = await jsonRequest<{ data: any[] }>('/api/client?type=admin&include=allocations');
+        adminItems = adminRes.data || [];
+      } catch {
+        adminItems = [];
+      }
+
+      if (adminItems.length === 0) {
+        try {
+          const allRes = await jsonRequest<{ data: any[] }>('/api/client?type=admin-all&include=allocations');
+          adminItems = allRes.data || [];
+        } catch {
+          adminItems = [];
+        }
+      }
+
+      const seen = new Set<string>();
+      combinedItems = [];
+      for (const item of [...ownItems, ...adminItems]) {
+        const id = item?.attributes?.identifier || item?.identifier;
+        if (id && !seen.has(id)) {
+          seen.add(id);
+          combinedItems.push(item);
+        }
+      }
+    }
+
     const hydrated = await Promise.all(
-      items.map(async (item) => {
+      combinedItems.map(async (item) => {
         const identifier = item?.attributes?.identifier || item?.identifier;
         try {
           const res = await jsonRequest<{ attributes: any }>(`/api/client/servers/${encodeURIComponent(identifier)}/resources`);
