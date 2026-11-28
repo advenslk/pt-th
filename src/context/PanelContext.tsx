@@ -113,6 +113,8 @@ interface PanelContextValue {
   appendOptimizeLog: (entry: OptimizeRunLogEntry) => void;
   clearOptimizeHistory: () => void;
   isAutoOptimizing: boolean;
+  showOtherServers: boolean;
+  setShowOtherServers: (show: boolean) => void;
 }
 
 const PanelContext = createContext<PanelContextValue | null>(null);
@@ -275,6 +277,13 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
   const autoOptRunningRef = useRef(false);
   const serversRef = useRef<PterodactylServer[]>(servers);
   serversRef.current = servers;
+  const [showOtherServers, setShowOtherServersState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('midnightx_show_other_servers') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -445,6 +454,15 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const setShowOtherServers = useCallback((show: boolean) => {
+    setShowOtherServersState(show);
+    try {
+      localStorage.setItem('midnightx_show_other_servers', show ? 'true' : 'false');
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
   const refreshData = useCallback(async () => {
     refreshHelzerx();
     try {
@@ -454,9 +472,10 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
         setBillingConfigured(health.billingConfigured);
       }
 
-      const [serverList, account, activity] = await Promise.all([
-        panelApi.getClientServers(),
-        panelApi.getAccount(),
+      const account = await panelApi.getAccount();
+      const canShowOthers = account.role === 'admin' && showOtherServers;
+      const [serverList, activity] = await Promise.all([
+        panelApi.getClientServers(canShowOthers),
         panelApi.getAccountActivity().catch(() => []),
       ]);
       setServers(serverList);
@@ -477,7 +496,7 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [refreshHelzerx]);
+  }, [refreshHelzerx, showOtherServers]);
 
   useEffect(() => {
     refreshData();
@@ -708,6 +727,8 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
         appendOptimizeLog,
         clearOptimizeHistory,
         isAutoOptimizing,
+        showOtherServers,
+        setShowOtherServers,
       }}
     >
       {children}

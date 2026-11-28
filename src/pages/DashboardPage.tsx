@@ -477,13 +477,19 @@ export function DashboardPage() {
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate({ page: 'billing' })}
-              className="mx-btn-3d-primary px-3 py-1.5 rounded-xl text-xs cursor-pointer"
-            >
-              Manage Billing
-            </button>
+            {user?.role === 'admin' ? (
+              <button
+                type="button"
+                onClick={() => navigate({ page: 'billing' })}
+                className="mx-btn-3d-primary px-3 py-1.5 rounded-xl text-xs cursor-pointer"
+              >
+                Manage Billing
+              </button>
+            ) : (
+              <span className="px-3 py-1.5 rounded-xl text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-not-allowed">
+                Not yet ready
+              </span>
+            )}
           </div>
           {txs.length > 0 && (
             <div className="divide-y divide-black/[0.05] dark:divide-white/[0.05] text-xs">

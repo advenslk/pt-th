@@ -21,7 +21,17 @@ import { PanelConnectionNotice } from '../components/ui/PanelConnectionNotice';
 type SortKey = 'name' | 'cpu' | 'memory' | 'uptime';
 
 export function ServersPage() {
-  const { servers, navigate, sendPower, toggleFavorite, panelConnected, connectionError } = usePanel();
+  const {
+    servers,
+    user,
+    navigate,
+    sendPower,
+    toggleFavorite,
+    panelConnected,
+    connectionError,
+    showOtherServers,
+    setShowOtherServers,
+  } = usePanel();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | ServerStatus | 'favorites'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | ServerCategory>('all');
@@ -137,6 +147,17 @@ export function ServersPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {user?.role === 'admin' && (
+            <label className="mx-well-3d inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showOtherServers}
+                onChange={(e) => setShowOtherServers(e.target.checked)}
+                className="accent-[#8B5CF6] cursor-pointer"
+              />
+              <span>Show Other Servers</span>
+            </label>
+          )}
           <select
             aria-label="Filter by category"
             value={categoryFilter}
@@ -210,8 +231,13 @@ export function ServersPage() {
                         <h3 className="mx-heading-3d text-sm font-bold text-[#171717] dark:text-white truncate">
                           {srv.name}
                         </h3>
-                        <div className="text-[11px] font-medium text-[#777777] dark:text-zinc-400 truncate">
-                          {srv.identifier} · {srv.node}
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#777777] dark:text-zinc-400 truncate">
+                          <span className="truncate">{srv.identifier} · {srv.node}</span>
+                          {user?.role === 'admin' && showOtherServers && !srv.isServerOwner && (
+                            <span className="px-1.5 py-0.5 rounded bg-violet-500/15 text-[#8B5CF6] text-[10px] font-semibold shrink-0">
+                              Other
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
