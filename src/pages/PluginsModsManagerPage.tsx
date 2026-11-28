@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AlertTriangle,
   Boxes,
   CheckCircle2,
+  Cpu,
   Download,
   ExternalLink,
   FileCode2,
   FolderPlus,
+  Layers,
   Loader2,
   Package,
   Power,
@@ -13,6 +16,7 @@ import {
   RefreshCw,
   Save,
   Search,
+  Sparkles,
   Trash2,
   Upload,
   X,
@@ -22,6 +26,16 @@ import { PanelConnectionNotice } from '../components/ui/PanelConnectionNotice';
 import { usePanel } from '../context/PanelContext';
 import type { FileEntry } from '../types/panel';
 import { formatBytes, formatRelativeTime } from '../utils/format';
+import {
+  detectServerEnvironment,
+  getCompatibleLoaders,
+  getLoaderKind,
+  LOADER_LABELS,
+  selectBestModrinthVersion,
+  type DetectedServerEnv,
+  type ModrinthVersionCandidate,
+  type ServerLoaderId,
+} from '../utils/serverCompatibility';
 
 interface ModrinthHit {
   project_id: string;
@@ -36,20 +50,6 @@ interface ModrinthHit {
   latest_version?: string;
 }
 
-interface ModrinthVersion {
-  id: string;
-  name: string;
-  version_number: string;
-  game_versions: string[];
-  loaders: string[];
-  files: Array<{
-    url: string;
-    filename: string;
-    primary: boolean;
-    size: number;
-  }>;
-}
-
 type ManagerMode = 'plugins' | 'mods';
 type ActiveTab = 'installed' | 'browse';
 
@@ -60,7 +60,7 @@ export function PluginsModsManagerPage({
   serverId: string;
   mode: ManagerMode;
 }) {
-  const { servers, notify, panelConnected, connectionError } = usePanel();
+  const { servers, notify, navigate, panelConnected, connectionError } = usePanel();
   const server = servers.find((s) => s.id === serverId || s.identifier === serverId) || servers[0];
 
   const isPlugins = mode === 'plugins';
@@ -78,6 +78,12 @@ export function PluginsModsManagerPage({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Auto-detected server environment
+  const [detectingEnv, setDetectingEnv] = useState(false);
+  const [detectedEnv, setDetectedEnv] = useState<DetectedServerEnv | null>(null);
+  const [autoMatch, setAutoMatch] = useState(true);
+  const [autoInstallDeps, setAutoInstallDeps] = useState(true);
+
   // Config viewer/editor modal
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [configFiles, setConfigFiles] = useState<FileEntry[]>([]);
@@ -93,6 +99,13 @@ export function PluginsModsManagerPage({
   const [searching, setSearching] = useState(false);
   const [hits, setHits] = useState<ModrinthHit[]>([]);
   const [installingId, setInstallingId] = useState<string | null>(null);
+  const [installProgress, setInstallProgress] = useState<string | null>(null);
+
+  // Version picker modal (for manual selection or incompatibility fallback)
+  const [versionModalHit, setVersionModalHit] = useState<ModrinthHit | null>(null);
+  const [versionModalList, setVersionModalList] = useState<ModrinthVersionCandidate[]>([]);
+  const [versionModalLoading, setVersionModalLoading] = useState(false);
+  const [versionModalWarning, setVersionModalWarning] = useState<string | null>(null);
 
   const loadInstalled = useCallback(async () => {
     if (!server || !panelConnected) return;
@@ -109,21 +122,67 @@ export function PluginsModsManagerPage({
     }
   }, [server?.id, panelConnected, targetDir]);
 
+  const runEnvDetection = useCallback(async () => {
+    if (!server || !panelConnected) return;
+    setDetectingEnv(true);
+    try {
+      const env = await detectServerEnvironment(server);
+      setDetectedEnv(env);
+
+      // Apply detected loader & MC version if matching current manager mode (or override via saved pref)
+      const envKind = env.kind;
+      const modeMatches =
+        (isPlugins && envKind === 'plugin') || (!isPlugins && envKind === 'mod');
+
+      if (modeMatches && env.loader !== 'unknown') {
+        setLoaderFilter(env.loader);
+      } else {
+        setLoaderFilter('all');
+      }
+      if (env.mcVersion) {
+        setMcVersion(env.mcVersion);
+      }
+    } finally {
+      setDetectingEnv(false);
+    }
+  }, [server, panelConnected, isPlugins]);
+
   useEffect(() => {
     loadInstalled();
   }, [loadInstalled]);
 
+  useEffect(() => {
+    setHits([]);
+    setDetectedEnv(null);
+    runEnvDetection();
+  }, [server?.id, mode, runEnvDetection]);
+
   const searchModrinth = useCallback(
-    async (qText = query) => {
+    async (qText = query, overrideLoader?: string, overrideMc?: string) => {
       setSearching(true);
       try {
+        const activeLoader = overrideLoader !== undefined ? overrideLoader : loaderFilter;
+        const activeMc = (overrideMc !== undefined ? overrideMc : mcVersion).trim();
+
         const facets: string[][] = [[`project_type:${isPlugins ? 'plugin' : 'mod'}`]];
-        if (loaderFilter !== 'all') {
-          facets.push([`categories:${loaderFilter}`]);
+
+        if (activeLoader && activeLoader !== 'all' && activeLoader !== 'unknown') {
+          if (autoMatch) {
+            const compat = getCompatibleLoaders(activeLoader, mode);
+            if (compat.length > 0) {
+              facets.push(compat.map((c) => `categories:${c}`));
+            } else {
+              facets.push([`categories:${activeLoader}`]);
+            }
+          } else {
+            facets.push([`categories:${activeLoader}`]);
+          }
         }
-        if (mcVersion.trim()) {
-          facets.push([`versions:${mcVersion.trim()}`]);
+
+        if (activeMc) {
+          facets.push([`versions:${activeMc}`]);
         }
+
         const url = new URL('https://api.modrinth.com/v2/search');
         if (qText.trim()) url.searchParams.set('query', qText.trim());
         url.searchParams.set('facets', JSON.stringify(facets));
@@ -140,14 +199,16 @@ export function PluginsModsManagerPage({
         setSearching(false);
       }
     },
-    [query, isPlugins, loaderFilter, mcVersion, labelPlural, notify]
+    [query, isPlugins, mode, loaderFilter, mcVersion, autoMatch, labelPlural, notify]
   );
 
+  // Re-run search automatically whenever filters sync on Browse tab
   useEffect(() => {
-    if (tab === 'browse' && hits.length === 0) {
-      searchModrinth('');
+    if (tab === 'browse' && !detectingEnv) {
+      searchModrinth(query, loaderFilter, mcVersion);
     }
-  }, [tab, hits.length, searchModrinth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, loaderFilter, mcVersion, autoMatch, detectingEnv]);
 
   const jarItems = useMemo(() => {
     const q = searchInstalled.trim().toLowerCase();
@@ -162,16 +223,32 @@ export function PluginsModsManagerPage({
       });
   }, [files, searchInstalled, filterState]);
 
-  const configFolders = useMemo(
-    () => files.filter((f) => f.isDirectory),
-    [files]
-  );
+  const configFolders = useMemo(() => files.filter((f) => f.isDirectory), [files]);
 
   if (!panelConnected && connectionError) {
     return <PanelConnectionNotice message={connectionError} />;
   }
 
   if (!server) return null;
+
+  const compatibleLoadersForActive =
+    loaderFilter !== 'all' && loaderFilter !== 'unknown'
+      ? getCompatibleLoaders(loaderFilter, mode)
+      : [];
+
+  const checkHitCompatibility = (hit: ModrinthHit) => {
+    const cats = (hit.categories || []).map((c) => c.toLowerCase());
+    const vers = hit.versions || [];
+
+    const loaderOk =
+      compatibleLoadersForActive.length === 0 ||
+      compatibleLoadersForActive.some((cl) => cats.includes(cl));
+
+    const trimmedMc = mcVersion.trim();
+    const mcOk = !trimmedMc || vers.includes(trimmedMc);
+
+    return { loaderOk, mcOk, compatible: loaderOk && mcOk };
+  };
 
   const handleCreateFolder = async () => {
     try {
@@ -190,11 +267,7 @@ export function PluginsModsManagerPage({
     try {
       await panelApi.renameFile(server.id, targetDir, entry.name, nextName);
       await loadInstalled();
-      notify(
-        `${labelSingular} ${isEnabled ? 'disabled' : 'enabled'}`,
-        nextName,
-        'success'
-      );
+      notify(`${labelSingular} ${isEnabled ? 'disabled' : 'enabled'}`, nextName, 'success');
     } catch (err: any) {
       notify('Toggle failed', err.message, 'error');
     } finally {
@@ -234,44 +307,178 @@ export function PluginsModsManagerPage({
     }
   };
 
+  const installChosenVersion = async (
+    projectTitle: string,
+    chosen: ModrinthVersionCandidate,
+    visitedProjects: Set<string>,
+    depth = 0
+  ): Promise<string[]> => {
+    const jarFile =
+      chosen.files?.find((f) => f.primary && f.filename.toLowerCase().endsWith('.jar')) ||
+      chosen.files?.find((f) => f.filename.toLowerCase().endsWith('.jar')) ||
+      chosen.files?.[0];
+
+    if (!jarFile?.url) {
+      throw new Error(`No downloadable .jar file found for ${projectTitle}.`);
+    }
+
+    if (!folderExists) {
+      await panelApi.createFolder(server.id, '/', isPlugins ? 'plugins' : 'mods').catch(() => {});
+    }
+
+    setInstallProgress(`Downloading ${jarFile.filename}...`);
+    const binRes = await fetch(jarFile.url);
+    if (!binRes.ok) throw new Error(`Download error (${binRes.status})`);
+    const blob = await binRes.blob();
+    const fileObj = new File([blob], jarFile.filename, { type: 'application/java-archive' });
+
+    setInstallProgress(`Uploading ${jarFile.filename} to ${targetDir}...`);
+    const signedUrl = await panelApi.getUploadUrl(server.id);
+    await panelApi.uploadFilesToSignedUrl(signedUrl, targetDir, [fileObj]);
+
+    const installedNames = [jarFile.filename];
+
+    // Auto-install required dependencies (depth limited to 2 to avoid cycles)
+    if (autoInstallDeps && depth < 2 && Array.isArray(chosen.dependencies)) {
+      const requiredDeps = chosen.dependencies.filter(
+        (d) => d.dependency_type === 'required' && d.project_id && !visitedProjects.has(d.project_id)
+      );
+
+      for (const dep of requiredDeps) {
+        if (!dep.project_id) continue;
+        visitedProjects.add(dep.project_id);
+        try {
+          const [projRes, depVersRes] = await Promise.all([
+            fetch(`https://api.modrinth.com/v2/project/${encodeURIComponent(dep.project_id)}`),
+            fetch(`https://api.modrinth.com/v2/project/${encodeURIComponent(dep.project_id)}/version`),
+          ]);
+          if (!projRes.ok || !depVersRes.ok) continue;
+          const depProj = await projRes.json();
+          const depSlug = String(depProj?.slug || '').toLowerCase();
+          const depTitle = String(depProj?.title || dep.project_id);
+
+          // Skip if a matching jar already appears in targetDir
+          const alreadyHasDep = files.some((f) => {
+            const lower = f.name.toLowerCase();
+            return (
+              lower.endsWith('.jar') &&
+              (lower.includes(depSlug.replace(/-/g, '')) ||
+                lower.includes(depSlug.split('-')[0]))
+            );
+          });
+          if (alreadyHasDep) continue;
+
+          const depVersions: ModrinthVersionCandidate[] = await depVersRes.json();
+          let depChosen: ModrinthVersionCandidate | null = null;
+
+          if (dep.version_id) {
+            depChosen = depVersions.find((v) => v.id === dep.version_id) || null;
+          }
+          if (!depChosen) {
+            const bestDep = selectBestModrinthVersion(depVersions, {
+              loader: loaderFilter,
+              mcVersion,
+              mode,
+            });
+            depChosen = bestDep.version;
+          }
+
+          if (depChosen) {
+            const subInstalled = await installChosenVersion(
+              depTitle,
+              depChosen,
+              visitedProjects,
+              depth + 1
+            );
+            installedNames.push(...subInstalled);
+          }
+        } catch {
+          // Non-fatal: continue even if optional resolution fails
+        }
+      }
+    }
+
+    return installedNames;
+  };
+
+  const openVersionSelector = async (hit: ModrinthHit, warningMsg?: string, preloaded?: ModrinthVersionCandidate[]) => {
+    setVersionModalHit(hit);
+    setVersionModalWarning(warningMsg || null);
+    if (preloaded) {
+      setVersionModalList(preloaded);
+      setVersionModalLoading(false);
+      return;
+    }
+    setVersionModalLoading(true);
+    setVersionModalList([]);
+    try {
+      const res = await fetch(
+        `https://api.modrinth.com/v2/project/${encodeURIComponent(hit.project_id)}/version`
+      );
+      if (!res.ok) throw new Error('Failed to load versions');
+      const data: ModrinthVersionCandidate[] = await res.json();
+      setVersionModalList(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setVersionModalWarning(err?.message || 'Could not load project versions');
+    } finally {
+      setVersionModalLoading(false);
+    }
+  };
+
   const handleInstallFromModrinth = async (hit: ModrinthHit) => {
     setInstallingId(hit.project_id);
+    setInstallProgress(`Finding compatible build for ${hit.title}...`);
     try {
-      const params = new URLSearchParams();
-      if (loaderFilter !== 'all') params.set('loaders', JSON.stringify([loaderFilter]));
-      if (mcVersion.trim()) params.set('game_versions', JSON.stringify([mcVersion.trim()]));
-
       const vRes = await fetch(
-        `https://api.modrinth.com/v2/project/${encodeURIComponent(hit.project_id)}/version?${params.toString()}`
+        `https://api.modrinth.com/v2/project/${encodeURIComponent(hit.project_id)}/version`
       );
       if (!vRes.ok) throw new Error('Failed to fetch project versions');
-      let versions: ModrinthVersion[] = await vRes.json();
-      if (!Array.isArray(versions) || versions.length === 0) {
-        const fallbackRes = await fetch(
-          `https://api.modrinth.com/v2/project/${encodeURIComponent(hit.project_id)}/version`
+      const versions: ModrinthVersionCandidate[] = await vRes.json();
+
+      if (autoMatch && (loaderFilter !== 'all' || mcVersion.trim())) {
+        const selection = selectBestModrinthVersion(versions, {
+          loader: loaderFilter,
+          mcVersion,
+          mode,
+        });
+
+        if (!selection.version) {
+          // Do NOT install an incompatible build blindly — let the user see available versions cleanly
+          setInstallingId(null);
+          setInstallProgress(null);
+          openVersionSelector(hit, selection.reason, versions);
+          return;
+        }
+
+        const installedFiles = await installChosenVersion(
+          hit.title,
+          selection.version,
+          new Set([hit.project_id])
         );
-        versions = await fallbackRes.json();
+        await loadInstalled();
+        const extraDeps = installedFiles.length > 1 ? ` (+${installedFiles.length - 1} dep)` : '';
+        notify(
+          `Installed ${hit.title}${extraDeps}`,
+          `${installedFiles[0]} · ${selection.reason}`,
+          'success'
+        );
+      } else {
+        // Manual / unfiltered fallback
+        const selection = selectBestModrinthVersion(versions, {
+          loader: loaderFilter,
+          mcVersion,
+          mode,
+        });
+        const chosen = selection.version || versions[0];
+        if (!chosen) throw new Error('No downloadable version found.');
+        const installedFiles = await installChosenVersion(
+          hit.title,
+          chosen,
+          new Set([hit.project_id])
+        );
+        await loadInstalled();
+        notify(`Installed ${hit.title}`, `${installedFiles[0]} -> ${targetDir}`, 'success');
       }
-      const chosen = versions[0];
-      const jarFile = chosen?.files?.find((f) => f.primary) || chosen?.files?.[0];
-      if (!jarFile?.url) {
-        throw new Error('No downloadable .jar file found for this version.');
-      }
-
-      if (!folderExists) {
-        await panelApi.createFolder(server.id, '/', isPlugins ? 'plugins' : 'mods').catch(() => {});
-      }
-
-      const binRes = await fetch(jarFile.url);
-      if (!binRes.ok) throw new Error(`Download error (${binRes.status})`);
-      const blob = await binRes.blob();
-      const fileObj = new File([blob], jarFile.filename, { type: 'application/java-archive' });
-
-      const signedUrl = await panelApi.getUploadUrl(server.id);
-      await panelApi.uploadFilesToSignedUrl(signedUrl, targetDir, [fileObj]);
-
-      await loadInstalled();
-      notify(`Installed ${hit.title}`, `${jarFile.filename} -> ${targetDir}`, 'success');
     } catch (err: any) {
       notify(
         `Install failed for ${hit.title}`,
@@ -280,6 +487,24 @@ export function PluginsModsManagerPage({
       );
     } finally {
       setInstallingId(null);
+      setInstallProgress(null);
+    }
+  };
+
+  const handleInstallExplicitVersion = async (hit: ModrinthHit, ver: ModrinthVersionCandidate) => {
+    setVersionModalHit(null);
+    setInstallingId(hit.project_id);
+    setInstallProgress(`Installing ${ver.version_number}...`);
+    try {
+      const installedFiles = await installChosenVersion(hit.title, ver, new Set([hit.project_id]));
+      await loadInstalled();
+      const extraDeps = installedFiles.length > 1 ? ` (+${installedFiles.length - 1} dep)` : '';
+      notify(`Installed ${hit.title}${extraDeps}`, `${installedFiles[0]} -> ${targetDir}`, 'success');
+    } catch (err: any) {
+      notify(`Install failed for ${hit.title}`, err?.message || 'Upload error', 'error');
+    } finally {
+      setInstallingId(null);
+      setInstallProgress(null);
     }
   };
 
@@ -340,21 +565,29 @@ export function PluginsModsManagerPage({
         { id: 'all', label: 'All Loaders' },
         { id: 'paper', label: 'Paper' },
         { id: 'purpur', label: 'Purpur' },
+        { id: 'folia', label: 'Folia' },
         { id: 'spigot', label: 'Spigot' },
         { id: 'bukkit', label: 'Bukkit' },
         { id: 'velocity', label: 'Velocity' },
+        { id: 'waterfall', label: 'Waterfall' },
         { id: 'bungeecord', label: 'BungeeCord' },
       ]
     : [
         { id: 'all', label: 'All Loaders' },
-        { id: 'fabric', label: 'Fabric' },
         { id: 'forge', label: 'Forge' },
         { id: 'neoforge', label: 'NeoForge' },
+        { id: 'fabric', label: 'Fabric' },
         { id: 'quilt', label: 'Quilt' },
       ];
 
   const enabledCount = files.filter((f) => !f.isDirectory && f.name.endsWith('.jar')).length;
   const disabledCount = files.filter((f) => !f.isDirectory && f.name.endsWith('.jar.disabled')).length;
+
+  const detectedKindMismatch =
+    detectedEnv &&
+    detectedEnv.loader !== 'unknown' &&
+    ((isPlugins && getLoaderKind(detectedEnv.loader) === 'mod') ||
+      (!isPlugins && getLoaderKind(detectedEnv.loader) === 'plugin'));
 
   return (
     <div className="space-y-6">
@@ -373,7 +606,7 @@ export function PluginsModsManagerPage({
               {labelPlural} Manager
             </h1>
             <p className="text-xs sm:text-sm text-[#777777] dark:text-zinc-400 mt-0.5">
-              {server.name} · Manage <span className="font-mono">{targetDir}</span>, enable/disable .jar files, edit configs &amp; install directly from Modrinth
+              {server.name} · Manage <span className="font-mono">{targetDir}</span>, auto-match server software &amp; MC version, and install safely from Modrinth
             </p>
           </div>
         </div>
@@ -394,7 +627,7 @@ export function PluginsModsManagerPage({
             className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium cursor-pointer disabled:opacity-50"
           >
             <Upload className="w-3.5 h-3.5 text-[#06B6D4]" />
-            {uploading ? 'Uploading...' : `Upload .jar`}
+            {uploading ? 'Uploading...' : 'Upload .jar'}
           </button>
           <button
             type="button"
@@ -406,14 +639,144 @@ export function PluginsModsManagerPage({
           </button>
           <button
             type="button"
-            onClick={loadInstalled}
+            onClick={() => {
+              loadInstalled();
+              runEnvDetection();
+            }}
             className="mx-btn-3d inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading || detectingEnv ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
       </div>
+
+      {/* Auto-Detected Server Compatibility Banner */}
+      <div className="mx-card-3d p-4 rounded-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-4 border border-[#8B5CF6]/20">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="mx-well-3d w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+            {detectingEnv ? (
+              <Loader2 className="w-4 h-4 text-[#8B5CF6] animate-spin" />
+            ) : (
+              <Cpu className="w-4 h-4 text-[#8B5CF6]" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-[#171717] dark:text-white">
+                Server Environment
+              </span>
+              {detectingEnv ? (
+                <span className="text-[11px] text-[#777777] dark:text-zinc-400">
+                  Detecting software &amp; Minecraft version...
+                </span>
+              ) : (
+                <>
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#8B5CF6]/15 text-[#8B5CF6] dark:text-violet-300">
+                    {loaderFilter !== 'all'
+                      ? LOADER_LABELS[loaderFilter as ServerLoaderId] || loaderFilter
+                      : detectedEnv?.loader && detectedEnv.loader !== 'unknown'
+                        ? detectedEnv.loaderLabel
+                        : 'Loader Unknown'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#06B6D4]/15 text-[#06B6D4] dark:text-cyan-300 font-mono">
+                    {mcVersion.trim() ? `MC ${mcVersion.trim()}` : 'MC Version Unknown'}
+                  </span>
+                  {detectedEnv && detectedEnv.sources.length > 0 && (
+                    <span className="text-[11px] text-[#777777] dark:text-zinc-400 truncate">
+                      Detected via {detectedEnv.sources.slice(0, 2).join(', ')}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+            <p className="text-[11px] text-[#777777] dark:text-zinc-400 mt-1">
+              {autoMatch
+                ? `Auto-Match is ON — searching and installing only ${labelPlural.toLowerCase()} compatible with ${
+                    loaderFilter !== 'all' ? LOADER_LABELS[loaderFilter as ServerLoaderId] || loaderFilter : 'your server'
+                  }${mcVersion.trim() ? ` (${mcVersion.trim()})` : ''}.`
+                : 'Auto-Match is OFF — showing unfiltered Modrinth results.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <label className="mx-well-3d inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={autoMatch}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setAutoMatch(next);
+                if (next && detectedEnv) {
+                  const modeMatches =
+                    (isPlugins && detectedEnv.kind === 'plugin') ||
+                    (!isPlugins && detectedEnv.kind === 'mod');
+                  if (modeMatches && detectedEnv.loader !== 'unknown') {
+                    setLoaderFilter(detectedEnv.loader);
+                  }
+                  if (detectedEnv.mcVersion) {
+                    setMcVersion(detectedEnv.mcVersion);
+                  }
+                }
+              }}
+              className="accent-[#8B5CF6] rounded cursor-pointer"
+            />
+            <Sparkles className="w-3.5 h-3.5 text-[#8B5CF6]" />
+            <span className="font-medium">Auto-Match Server</span>
+          </label>
+
+          <label
+            title="Automatically install required library dependencies (e.g. Fabric API, Cloth Config, Architectury, GeckoLib)"
+            className="mx-well-3d inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs cursor-pointer select-none"
+          >
+            <input
+              type="checkbox"
+              checked={autoInstallDeps}
+              onChange={(e) => setAutoInstallDeps(e.target.checked)}
+              className="accent-[#06B6D4] rounded cursor-pointer"
+            />
+            <Layers className="w-3.5 h-3.5 text-[#06B6D4]" />
+            <span className="font-medium">Auto Dependencies</span>
+          </label>
+
+          <button
+            type="button"
+            onClick={runEnvDetection}
+            disabled={detectingEnv}
+            className="mx-btn-3d inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3 h-3 ${detectingEnv ? 'animate-spin' : ''}`} />
+            Re-detect
+          </button>
+        </div>
+      </div>
+
+      {/* Mode mismatch helpful prompt (e.g. opened Plugins on a Forge server, or Mods on a Paper server) */}
+      {detectedKindMismatch && detectedEnv && (
+        <div className="mx-card-3d p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-amber-500/35 bg-amber-500/5">
+          <div className="flex items-center gap-2.5 text-xs">
+            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+            <span className="text-[#171717] dark:text-zinc-200">
+              This server was detected as <strong>{detectedEnv.loaderLabel}</strong>
+              {detectedEnv.mcVersion ? ` (${detectedEnv.mcVersion})` : ''}, which normally uses the{' '}
+              <strong>{isPlugins ? 'Mods Manager' : 'Plugins Manager'}</strong>.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              navigate({
+                page: isPlugins ? 'server-mods' : 'server-plugins',
+                serverId: server.id,
+              })
+            }
+            className="mx-btn-3d-primary px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer shrink-0"
+          >
+            Open {isPlugins ? 'Mods Manager' : 'Plugins Manager'}
+          </button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="mx-well-3d inline-flex items-center gap-1.5 p-1.5 rounded-2xl">
@@ -435,7 +798,7 @@ export function PluginsModsManagerPage({
           }`}
         >
           <Download className="w-3.5 h-3.5" />
-          Browse &amp; Install (Modrinth)
+          Browse &amp; Auto-Install (Modrinth)
         </button>
       </div>
 
@@ -506,7 +869,7 @@ export function PluginsModsManagerPage({
                 <div className="mx-card-3d p-10 rounded-2xl text-center space-y-2">
                   <p className="text-sm font-semibold">No {labelPlural.toLowerCase()} found</p>
                   <p className="text-xs text-[#777777] dark:text-zinc-400">
-                    Upload a .jar file or switch to Browse &amp; Install to add {labelPlural.toLowerCase()} directly from Modrinth.
+                    Upload a .jar file or switch to Browse &amp; Auto-Install to add compatible {labelPlural.toLowerCase()} directly from Modrinth.
                   </p>
                 </div>
               ) : (
@@ -618,7 +981,9 @@ export function PluginsModsManagerPage({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={`Search Modrinth ${labelPlural.toLowerCase()} (e.g. ${isPlugins ? 'LuckPerms, EssentialsX, Spark' : 'Sodium, Lithium, FerriteCore'})...`}
+                placeholder={`Search Modrinth ${labelPlural.toLowerCase()} (e.g. ${
+                  isPlugins ? 'LuckPerms, EssentialsX, Spark' : 'Sodium, JEI, Create, Lithium'
+                })...`}
                 className="mx-input-3d w-full pl-8 pr-3 py-2 text-xs rounded-xl"
               />
             </div>
@@ -627,6 +992,7 @@ export function PluginsModsManagerPage({
               <select
                 value={loaderFilter}
                 onChange={(e) => setLoaderFilter(e.target.value)}
+                aria-label="Server loader"
                 className="mx-input-3d px-3 py-2 text-xs rounded-xl cursor-pointer"
               >
                 {loaderOptions.map((opt) => (
@@ -641,7 +1007,7 @@ export function PluginsModsManagerPage({
                 value={mcVersion}
                 onChange={(e) => setMcVersion(e.target.value)}
                 placeholder="MC Version (e.g. 1.21.1)"
-                className="mx-input-3d w-36 px-3 py-2 text-xs rounded-xl"
+                className="mx-input-3d w-40 px-3 py-2 text-xs rounded-xl font-mono"
               />
 
               <button
@@ -655,13 +1021,25 @@ export function PluginsModsManagerPage({
             </div>
           </form>
 
+          {installProgress && (
+            <div className="mx-card-3d px-4 py-2.5 rounded-xl flex items-center gap-2.5 text-xs text-[#8B5CF6] font-medium">
+              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+              <span>{installProgress}</span>
+            </div>
+          )}
+
           {searching && hits.length === 0 ? (
             <div className="mx-card-3d p-10 rounded-2xl text-center text-xs text-[#777777]">
-              Searching Modrinth {labelPlural.toLowerCase()}...
+              Searching Modrinth {labelPlural.toLowerCase()} compatible with your server...
             </div>
           ) : hits.length === 0 ? (
-            <div className="mx-card-3d p-10 rounded-2xl text-center text-xs text-[#777777]">
-              No matching {labelPlural.toLowerCase()} found on Modrinth.
+            <div className="mx-card-3d p-10 rounded-2xl text-center space-y-2">
+              <p className="text-sm font-semibold">
+                No matching {labelPlural.toLowerCase()} found on Modrinth
+              </p>
+              <p className="text-xs text-[#777777] dark:text-zinc-400">
+                Try clearing the search query or temporarily disabling Auto-Match if your server version is very new or older.
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -670,6 +1048,12 @@ export function PluginsModsManagerPage({
                   f.name.toLowerCase().includes(hit.slug.toLowerCase().split('-')[0])
                 );
                 const isInstalling = installingId === hit.project_id;
+                const compat = checkHitCompatibility(hit);
+                const activeLoaderLabel =
+                  loaderFilter !== 'all'
+                    ? LOADER_LABELS[loaderFilter as ServerLoaderId] || loaderFilter
+                    : 'Any';
+
                 return (
                   <div
                     key={hit.project_id}
@@ -702,6 +1086,29 @@ export function PluginsModsManagerPage({
                       {hit.description}
                     </p>
 
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          compat.compatible
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                        }`}
+                      >
+                        {compat.compatible ? (
+                          <>
+                            <Sparkles className="w-2.5 h-2.5" />
+                            Compatible · {activeLoaderLabel}
+                            {mcVersion.trim() ? ` ${mcVersion.trim()}` : ''}
+                          </>
+                        ) : (
+                          <>
+                            <AlertTriangle className="w-2.5 h-2.5" />
+                            {!compat.loaderOk ? `${activeLoaderLabel} unsupported` : `No MC ${mcVersion.trim()}`}
+                          </>
+                        )}
+                      </span>
+                    </div>
+
                     <div className="flex items-center justify-between gap-2 pt-2 border-t border-black/[0.06] dark:border-white/[0.06]">
                       <a
                         href={`https://modrinth.com/${isPlugins ? 'plugin' : 'mod'}/${hit.slug}`}
@@ -712,25 +1119,156 @@ export function PluginsModsManagerPage({
                         <ExternalLink className="w-3 h-3" />
                         Modrinth
                       </a>
-                      <button
-                        type="button"
-                        disabled={Boolean(installingId)}
-                        onClick={() => handleInstallFromModrinth(hit)}
-                        className="mx-btn-3d-primary inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer disabled:opacity-50"
-                      >
-                        {isInstalling ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Download className="w-3.5 h-3.5" />
-                        )}
-                        {isInstalling ? 'Installing...' : 'Install'}
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={Boolean(installingId)}
+                          onClick={() => openVersionSelector(hit)}
+                          className="mx-btn-3d px-2.5 py-1.5 rounded-xl text-[11px] font-medium cursor-pointer disabled:opacity-50"
+                        >
+                          Versions
+                        </button>
+                        <button
+                          type="button"
+                          disabled={Boolean(installingId)}
+                          onClick={() => handleInstallFromModrinth(hit)}
+                          className="mx-btn-3d-primary inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer disabled:opacity-50"
+                        >
+                          {isInstalling ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Download className="w-3.5 h-3.5" />
+                          )}
+                          {isInstalling ? 'Installing...' : autoMatch ? 'Auto-Install' : 'Install'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Version Picker Modal */}
+      {versionModalHit && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-xs"
+          onClick={() => setVersionModalHit(null)}
+        >
+          <div
+            className="mx-card-3d w-full max-w-2xl max-h-[82vh] rounded-2xl p-5 flex flex-col gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h2 className="mx-heading-3d text-sm font-bold">
+                  Select Version — {versionModalHit.title}
+                </h2>
+                <p className="text-[11px] text-[#777777] dark:text-zinc-400">
+                  Target server: {loaderFilter !== 'all' ? LOADER_LABELS[loaderFilter as ServerLoaderId] || loaderFilter : 'Any loader'}
+                  {mcVersion.trim() ? ` · MC ${mcVersion.trim()}` : ''}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVersionModalHit(null)}
+                className="mx-btn-3d p-1.5 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {versionModalWarning && (
+              <div className="p-3 rounded-xl border border-amber-500/35 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{versionModalWarning}</span>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {versionModalLoading ? (
+                <div className="py-10 text-center text-xs text-[#777777]">
+                  Loading available versions from Modrinth...
+                </div>
+              ) : versionModalList.length === 0 ? (
+                <div className="py-10 text-center text-xs text-[#777777]">
+                  No downloadable versions found.
+                </div>
+              ) : (
+                [...versionModalList]
+                  .sort((a, b) => {
+                    const aL = a.loaders.map((l) => l.toLowerCase());
+                    const bL = b.loaders.map((l) => l.toLowerCase());
+                    const aOk =
+                      (compatibleLoadersForActive.length === 0 ||
+                        compatibleLoadersForActive.some((cl) => aL.includes(cl))) &&
+                      (!mcVersion.trim() || a.game_versions.includes(mcVersion.trim()));
+                    const bOk =
+                      (compatibleLoadersForActive.length === 0 ||
+                        compatibleLoadersForActive.some((cl) => bL.includes(cl))) &&
+                      (!mcVersion.trim() || b.game_versions.includes(mcVersion.trim()));
+                    return Number(bOk) - Number(aOk);
+                  })
+                  .slice(0, 30)
+                  .map((ver) => {
+                  const vLoaders = ver.loaders.map((l) => l.toLowerCase());
+                  const loaderMatched =
+                    compatibleLoadersForActive.length === 0 ||
+                    compatibleLoadersForActive.some((cl) => vLoaders.includes(cl));
+                  const mcMatched =
+                    !mcVersion.trim() || ver.game_versions.includes(mcVersion.trim());
+                  const isCompatible = loaderMatched && mcMatched;
+                  const jar =
+                    ver.files.find((f) => f.primary) || ver.files[0];
+
+                  return (
+                    <div
+                      key={ver.id}
+                      className={`p-3 rounded-xl flex items-center justify-between gap-3 ${
+                        isCompatible ? 'mx-well-3d border border-emerald-500/35' : 'mx-well-3d opacity-75'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs font-bold text-[#171717] dark:text-white">
+                            {ver.version_number}
+                          </span>
+                          {isCompatible && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                              Compatible
+                            </span>
+                          )}
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-black/[0.06] dark:bg-white/[0.06]">
+                            {ver.loaders.join(', ')}
+                          </span>
+                          <span className="text-[10px] text-[#777777] dark:text-zinc-400 font-mono">
+                            MC {ver.game_versions.slice(0, 4).join(', ')}
+                            {ver.game_versions.length > 4 ? ` +${ver.game_versions.length - 4}` : ''}
+                          </span>
+                        </div>
+                        {jar && (
+                          <div className="text-[11px] font-mono text-[#777777] dark:text-zinc-400 truncate mt-0.5">
+                            {jar.filename} · {formatBytes(jar.size)}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleInstallExplicitVersion(versionModalHit, ver)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer shrink-0 ${
+                          isCompatible ? 'mx-btn-3d-primary' : 'mx-btn-3d'
+                        }`}
+                      >
+                        Install
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
       )}
 
