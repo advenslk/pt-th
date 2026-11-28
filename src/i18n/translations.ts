@@ -76,6 +76,9 @@ export type TranslationKey =
   | 'nav.startup'
   | 'nav.serverSettings'
   | 'nav.activity'
+  | 'nav.plugins'
+  | 'nav.mods'
+  | 'nav.players'
   | 'nav.billing'
   | 'nav.support'
   | 'nav.rewards'
@@ -121,6 +124,9 @@ const EN: Record<TranslationKey, string> = {
   'nav.startup': 'Startup',
   'nav.serverSettings': 'Server Settings',
   'nav.activity': 'Activity',
+  'nav.plugins': 'Plugins',
+  'nav.mods': 'Mods',
+  'nav.players': 'Players',
   'nav.billing': 'Billing',
   'nav.support': 'Support',
   'nav.rewards': 'Rewards & VIP',
@@ -170,6 +176,9 @@ const TRANSLATIONS: Record<string, Partial<Record<TranslationKey, string>>> = {
     'nav.startup': 'ආරම්භක සැකසුම්',
     'nav.serverSettings': 'සර්වර් සැකසුම්',
     'nav.activity': 'ක්‍රියාකාරකම්',
+    'nav.plugins': 'ප්ලගීන (Plugins)',
+    'nav.mods': 'මොඩ්ස් (Mods)',
+    'nav.players': 'ක්‍රීඩකයන් (Players)',
     'nav.billing': 'බිල්පත්',
     'nav.support': 'සහාය',
     'nav.settings': 'ගිණුම් සැකසුම්',

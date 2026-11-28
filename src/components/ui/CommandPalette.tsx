@@ -3,6 +3,7 @@ import {
   Archive,
   Award,
   Bell,
+  Boxes,
   CalendarClock,
   Command,
   CreditCard,
@@ -16,6 +17,7 @@ import {
   Network,
   PanelLeft,
   Play,
+  Puzzle,
   RefreshCw,
   Search,
   Server,
@@ -25,6 +27,7 @@ import {
   Star,
   SunMoon,
   TerminalSquare,
+  UserCheck,
   Users,
   X,
   Zap,
@@ -253,6 +256,9 @@ export function CommandPalette() {
         icon: React.ComponentType<{ className?: string }>;
       }> = [
         { page: 'server-files', title: 'File Manager', icon: FolderOpen },
+        { page: 'server-plugins', title: 'Plugins Manager', icon: Puzzle },
+        { page: 'server-mods', title: 'Mods Manager', icon: Boxes },
+        { page: 'server-players', title: 'Players Manager', icon: UserCheck },
         { page: 'server-backups', title: 'Backups', icon: Archive },
         { page: 'server-databases', title: 'Databases', icon: Database },
         { page: 'server-network', title: 'Network', icon: Network },
